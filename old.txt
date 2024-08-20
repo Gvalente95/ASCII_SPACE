@@ -1,0 +1,662 @@
+#include "header.h"
+
+// Function prototypes
+void initialize_game(GAME *game, SHIP *plr, LOOT *loots, SHIP *mobs, SHIP *proj, int *stars);
+int handle_input(GAME *game, SHIP *plr, int *has_moved, SHIP *proj);
+void update_game_state(GAME *game, SHIP *plr, LOOT *loots, int has_moved, SHIP *mobs, SHIP *proj, int time, int *stars, char *canv);
+void render_game(SHIP *plr, SHIP *mobs, SHIP *proj, int *stars, char *canv);
+
+int main() {
+  set_nonblocking_mode(1);
+  int time = 0;
+  int show_grid = 0;
+  int has_moved = 0;
+
+  // Allocate memory for mobs and projectiles
+  SHIP *mobs = malloc(sizeof(SHIP) * MOB_AM);
+  SHIP *proj = malloc(sizeof(PROJ) * PROJ_BUFFER);
+  LOOT *loots = malloc(sizeof(LOOT) * LOOT_BUFFER);
+
+  int stars[stars_AM];
+  char *canv = NULL;
+
+  int stars[STAR_BUFFER];
+  for (int i = 0; i < STAR_BUFFER - 1; i++)
+    stars[i] = rand_range(1, CANV_SIZE - CANV_W);
+
+  // Initialize game entities
+  SHIP plr;
+  GAME game;
+  initialize_game(&game, &plr, loots, mobs, proj, stars);
+
+  FILE *file = fopen(SAVEFILE, "r"); // Open file in read mode
+  if (file != NULL) {
+    fscanf(file, "%ld", &game.max_score); // Pass the address of max_score
+    fclose(file);
+  } else {
+    printf("Error opening file for reading.\n");
+  }
+
+  // Main game loop
+  while (1) {
+    usleep(7000);
+    time++;
+
+    game.level = game.score / 2000;
+
+    if (plr.hp <= 0)
+      break;
+
+    int inp = handle_input(&game, &plr, &has_moved, proj);
+    if (inp == 'm')
+      show_grid = !show_grid;
+
+    if (canv != NULL)
+      free(canv);
+    canv = init_blank_canv(CANV_W, CANV_H, 1);
+    for (int i = 0; i < STAR_BUFFER - 1; i++) {
+      if (canv[stars[i]] == ' ')
+        canv[stars[i]] = '.';
+      else
+        stars[i] = rand_range(1, CANV_SIZE - CANV_W);
+    }
+
+    for (int y = 0; y < CELL_SIZE; y++) {
+      for (int x = 0; x < CELL_SIZE; x++) {
+        char *cell = init_blank_canv(CANV_W / CELL_SIZE, CANV_H / CELL_SIZE, show_grid);
+        print_on_text(cell, canv, (CANV_W / CELL_SIZE) * x, (CANV_H / CELL_SIZE) * y);
+        free(cell);
+      }
+    }
+
+    update_game_state(&game, &plr, loots, has_moved, mobs, proj, time, stars, canv);
+    if (has_moved > 0)
+      has_moved--;
+
+    render_game(&plr, mobs, proj, stars, canv);
+
+    int i = 0;
+    char *header = init_blank_canv(CANV_W, 3, 1);
+    int start_index = CANV_W + 2;
+    for (int x = 0; x < PLR_MAX_HP; x++) {
+      start_index += 2;
+      header[start_index] = plr.hp > x ? HEART_IC : '.';
+    }
+    start_index += 4;
+    char scr[] = "SCR.";
+    for (int i = 0; i < 4; i++) {
+      header[start_index++] = scr[i];
+    }
+    start_index += 6;
+    int sc = game.score;
+    int pos = start_index;
+    do {
+      header[pos--] = (sc % 10) + '0';
+      sc /= 10;
+    } while (sc > 0);
+    start_index += 6;
+    char bst[] = "BEST.";
+    for (int i = 0; i < 5; i++)
+      canv[start_index + i] = bst[i];
+    start_index += 11;
+    sc = game.max_score;
+    pos = start_index;
+    do {
+      header[start_index--] = (sc % 10) + '0';
+      sc /= 10;
+    } while (sc > 0);
+    start_index += 11;
+    char lv[] = "Lv. ";
+    for (int i = 0; i < 4; i++)
+      canv[start_index + i] = lv[i];
+    start_index += 5;
+    sc = game.level;
+    pos = start_index;
+    do {
+      header[start_index--] = (sc % 10) + '0';
+      sc /= 10;
+    } while (sc > 0);
+    start_index += 11;
+    char Wp[] = "Wp. ";
+    for (int i = 0; i < 4; i++)
+      canv[start_index++] = Wp[i];
+    sc = plr.weap;
+    do {
+      header[start_index--] = (sc % 10) + '0';
+      sc /= 10;
+    } while (sc > 0);
+
+    start_index += 11;
+    char Sh[] = "Sh. ";
+    for (int i = 0; i < 4; i++)
+      canv[start_index++] = Sh[i];
+    sc = game.shots_fired;
+    do {
+      header[start_index--] = (sc % 10) + '0';
+      sc /= 10;
+    } while (sc > 0);
+
+    system("clear");
+    char *mob_color1 = game.level < 5 ? BLUE : game.level < 10 ? GREEN : game.level < 15 ? YELLOW : game.level < 20 ? ORANGE : game.level < 25 ? RED : MAGENTA;
+    char *mob_color2 = game.level < 5 ? LIGHT_BLUE : game.level < 10 ? DARK_GREEN : game.level < 15 ? PALE_YELLOW : game.level < 20 ? RED : game.level < 25 ? BROWN : CYAN;
+
+    print_on_text(header, canv, 0, 0);
+    while (canv[i]) {
+      if (canv[i] == WIND_DOT || canv[i] == WIND_VER || canv[i] == WIND_HOR)
+        print_colored_text(NULL, canv[i] == WIND_DOT ? '.' : canv[i] == WIND_VER ? '|' : '-', rand() % 2 == 0 ? RED : ORANGE);
+      else if (canv[i] == CANV_VER)
+        printf("|");
+      else if (canv[i] == CANV_HOR)
+        printf("_");
+      else if (canv[i] == MOB_LBORD)
+        print_colored_text(NULL, '/', rand() % 2 == 0 ? mob_color1 : mob_color2);
+      else if (canv[i] == MOB_RBORD)
+        print_colored_text(NULL, '\\', rand() % 2 == 0 ? mob_color1 : mob_color2);
+      else if (canv[i] == MOB_HOR)
+        print_colored_text(NULL, '_', rand() % 2 == 0 ? mob_color1 : mob_color2);
+      else if (canv[i] == MOB_VER)
+        print_colored_text(NULL, '|', rand() % 2 == 0 ? mob_color1 : mob_color2);
+      else if (canv[i] == HEART_IC)
+        print_colored_text(HEART_CODE, '\0', RED);
+      else if (canv[i] == EXPL_START || canv[i + 1] == EXPL_START || canv[i - 1] == EXPL_START || canv[i + CANV_W + 1] == EXPL_START || canv[i - CANV_W - 1] == EXPL_START) {
+        game.score += 10;
+        int r = rand_range(0, 4);
+        print_colored_text(NULL, r == 0 ? '.' : r == 1 ? '/' : r == 2 ? '\\' : '*', rand() % 2 == 0 ? mob_color1 : mob_color2);
+      } else
+        printf("%c", canv[i]);
+      i++;
+    }
+  }
+  free(mobs);
+  free(proj);
+  free(canv);
+  system("clear");
+
+  fopen(SAVEFILE, "w"); // Open file in write mode
+  if (file != NULL) {
+    if (game.score > game.max_score) {
+      game.max_score = game.score; // Update max_score with the new high score
+    }
+    fprintf(file, "%ld", game.max_score); // Write max_score to the file
+    fclose(file);
+  } else {
+    printf("Error opening file for writing.\n");
+  }
+  return 0;
+}
+
+// Function definitions
+
+void initialize_game(GAME *game, SHIP *plr, LOOT *loots, SHIP *mobs, SHIP *proj, int *stars) {
+  game->level = 0;
+  game->score = 0;
+  game->max_score = 0;
+  game->attr = 3;
+
+  plr->x_pos = C_WIDTH * 4 + 2;
+  plr->y_pos = C_HEIGHT * 8 + 1;
+  plr->hp = PLR_MAX_HP;
+  plr->hurt_timer = 0;
+  plr->MOR_SHLD = 0;
+  plr->weap = 0;
+  plr->dir = up;
+  plr->prj_qual = 0;
+
+  for (int i = 0; i < MOB_AM; i++) {
+    int x, y;
+    do {
+      x = C_WIDTH * (rand() % CELL_SIZE) + 2;
+      y = (-SHIP_H - 1) - ((CANV_H / CELL_SIZE) * rand_range(1, 5));
+    } while (is_position_occupied(mobs, i, x, y));
+    mobs[i].x_pos = x;
+    mobs[i].y_pos = y;
+    mobs[i].dir = down;
+    mobs[i].MOR_SHLD = 0;
+    mobs[i].weap = 0;
+    mobs[i].hp = MOB_MAX_HP;
+    mobs[i].hurt_timer = 0;
+  }
+
+  for (int i = 0; i < PROJ_BUFFER; i++) {
+    proj[i].x_pos = -1;
+    proj[i].y_pos = -1;
+  }
+
+  for (int i = 0; i < LOOT_BUFFER; i++) {
+    loots[i].x_pos = -1;
+    loots[i].y_pos = -1;
+  }
+
+  for (int i = 0; i < stars_AM; i++) {
+    stars[i] = rand_range(1, CANV_SIZE);
+  }
+}
+
+int handle_input(GAME *game, SHIP *plr, int *has_moved, SHIP *proj) {
+  int c = -1;
+  if (!(*has_moved)) {
+    c = getchar();
+    if (c != EOF) {
+      if (c == 'a' && plr->x_pos > 2) {
+        plr->dir = left;
+        *has_moved = (CANV_W / CELL_SIZE) / 2;
+      } else if (c == 'd' && plr->x_pos < CANV_W - (CELL_SIZE - 5 + SHIP_W * 2)) {
+        plr->dir = right;
+        *has_moved = (CANV_W / CELL_SIZE) / 2;
+      } else if (c == 'w' && plr->y_pos > 2) {
+        plr->dir = up;
+        *has_moved = CANV_H / CELL_SIZE;
+      } else if (c == 's' && plr->y_pos < CANV_H - SHIP_H) {
+        plr->dir = down;
+        *has_moved = CANV_H / CELL_SIZE;
+      } else if (c == ' ') {
+        if (plr->weap > 0 && game->shots_fired > 0)
+          game->shots_fired--;
+        if (game->shots_fired == 0) {
+          if (plr->weap > 0)
+            plr->weap--;
+          game->shots_fired = shot_lock;
+        }
+        int w_prj = plr->weap;
+        for (int i = 0; i < PROJ_BUFFER; i++) {
+          DIR dir = w_prj == plr->weap       ? plr->dir
+                    : w_prj == plr->weap - 1 ? plr->dir == up     ? down
+                                               : plr->dir == down ? up
+                                               : plr->dir == left ? right
+                                                                  : left
+                    : w_prj == plr->weap - 2 ? plr->dir == up     ? left
+                                               : plr->dir == down ? right
+                                               : plr->dir == left ? up
+                                                                  : down
+                    : w_prj == plr->weap - 3 ? plr->dir == up     ? right
+                                               : plr->dir == down ? left
+                                               : plr->dir == left ? down
+                                                                  : up
+                    : w_prj == plr->weap - 4 ? plr->dir == up     ? up_right
+                                               : plr->dir == down ? up_left
+                                               : plr->dir == left ? down_left
+                                                                  : down_right
+                    : w_prj == plr->weap - 5 ? plr->dir == up     ? up_left
+                                               : plr->dir == down ? up_right
+                                               : plr->dir == left ? down_right
+                                                                  : down_left
+                    : w_prj == plr->weap - 6 ? plr->dir == up     ? down_left
+                                               : plr->dir == down ? down_right
+                                               : plr->dir == left ? up_left
+                                                                  : up_right
+                    : w_prj == plr->weap - 7 ? plr->dir == up     ? down_right
+                                               : plr->dir == down ? down_left
+                                               : plr->dir == left ? up_right
+                                                                  : up_left
+                                             : up;
+          if (proj[i].x_pos == -1) {
+            proj[i].x_pos = dir == up || dir == down ? plr->x_pos + SHIP_W / 2 : dir == left || dir == up_left ? plr->x_pos - 3 : plr->x_pos + SHIP_W + 3;
+            proj[i].y_pos = dir == up || dir == up_left || dir == up_right ? plr->y_pos - 1 : dir == down || dir == down_left || dir == down_right ? plr->y_pos + SHIP_H / 2 : dir == left || dir == right ? plr->y_pos + 1 : plr->y_pos - 1;
+            proj[i].dir = dir;
+            w_prj--;
+            if (w_prj <= 0)
+              break;
+          }
+        }
+      } else if (c == 'q') {
+        exit(0);
+      }
+    }
+  }
+  return (c);
+}
+
+void update_game_state(GAME *game, SHIP *plr, LOOT *loots, int has_moved, SHIP *mobs, SHIP *proj, int time, int *stars, char *canv) {
+  // Update player position
+
+  int min_lv = game->level / 5;
+
+  if (min_lv > 8)
+    min_lv = 8;
+
+  if (has_moved) {
+    plr->x_pos += plr->dir == right ? 2 : plr->dir == left ? -2 : 0;
+    plr->y_pos += plr->dir == down ? 1 : plr->dir == up ? -1 : 0;
+  }
+  // LOOT
+  for (int i = 0; i < LOOT_BUFFER; i++) {
+    if (loots[i].x_pos == -1 && loots[i].y_pos == -1)
+      continue;
+    print_on_text(loots[i].content, canv, loots[i].x_pos, loots[i].y_pos);
+    int x_diff = loots[i].x_pos - plr->x_pos;
+    int y_diff = loots[i].y_pos - plr->y_pos;
+    if (abs(x_diff) < 3 && abs(y_diff) < 3) {
+      loots[i].x_pos = -1;
+      loots[i].y_pos = -1;
+      if (loots[i].type == MOR_HP)
+        plr->hp++;
+      if (loots[i].type == MOR_MOR_SHLD)
+        plr->MOR_SHLD++;
+      if (loots[i].type == MOR_SCR)
+        game->score += 5000;
+      if (loots[i].type == BET_PRJ)
+        plr->prj_qual++;
+      if (loots[i].type == MOR_ATTR)
+        game->attr++;
+      if (loots[i].type == MOR_PRJ) {
+        plr->weap++;
+        game->shots_fired += shot_lock;
+      }
+    }
+  }
+
+  // Update mob positions
+  for (int i = 0; i < MOB_AM - 1; i++) {
+
+    if (mobs[i].hurt_timer >= 1) {
+      if (mobs[i].hurt_timer == 1) {
+        if (rand() % STRT_LOOT_CHNC) {
+          for (int x = 0; x < LOOT_BUFFER; x++) {
+            if (loots[x].x_pos == -1 && loots[x].y_pos == -1) {
+              loots[x].x_pos = mobs[i].x_pos + 1;
+              loots[x].y_pos = mobs[i].y_pos + 1;
+              loots[x].type = rand() % 4;
+              loots[x].content = loots[x].type == MOR_SCR ? MOR_SCR_IC : loots[x].type == MOR_MOR_SHLD ? MOR_MOR_SHLD_IC : loots[x].type == MOR_HP ? MOR_HP_IC : loots[x].type == MOR_ATTR ? MOR_ATTR_IC : BET_PRJ_IC;
+              break;
+            }
+          }
+        }
+        mobs[i].hp = MOB_MAX_HP + (game->level / 10);
+        mobs[i].y_pos = (-SHIP_H - 1) - ((CANV_H / CELL_SIZE) * rand_range(1, 5));
+        mobs[i].x_pos = C_WIDTH * (rand() % CELL_SIZE) + 2;
+        mobs[i].hurt_timer = 0;
+      } else
+        mobs[i].hurt_timer--;
+      continue;
+    }
+
+    if (plr->hurt_timer == 0) {
+      if (abs(mobs[i].y_pos - plr->y_pos) < 2 && abs(mobs[i].x_pos - plr->x_pos) < 2) {
+        plr->hp--;
+        plr->hurt_timer = HURT_DUR;
+      }
+    }
+    int t = 10 - (game->level / 5) < 3 ? 3 : 10 - (game->level / 5);
+    if (time % t == 0) {
+      if (game->level > 2) {
+        int distance_threshold = game->level * 2 > 40 ? 40 : game->level * 2;
+        int x_diff = mobs[i].x_pos - plr->x_pos;
+        int y_diff = mobs[i].y_pos - plr->y_pos;
+        if (abs(x_diff) < distance_threshold && abs(y_diff) < distance_threshold) {
+          // Mob is within range to follow the player
+          // Move horizontally towards the player
+          if (x_diff > 0) {
+            mobs[i].dir = left; // Move left
+          } else if (x_diff < 0) {
+            mobs[i].dir = right; // Move right
+          }
+
+          if (y_diff > 0) {
+            mobs[i].dir = up; // Move up
+          } else if (y_diff < 0) {
+            mobs[i].dir = down; // Move down
+          }
+        }
+      }
+
+      mobs[i].y_pos += mobs[i].dir == down ? 1 : mobs[i].dir == up ? -1 : 0;
+      mobs[i].x_pos += mobs[i].dir == right ? 2 : mobs[i].dir == left ? -2 : 0;
+      if (mobs[i].y_pos >= CANV_H + 10 || mobs[i].y_pos + SHIP_H < -CANV_H - 10 || mobs[i].x_pos >= CANV_W + 10 || mobs[i].x_pos + SHIP_W < -CANV_W - 10) {
+        DIR dir = rand() % 2;
+        mobs[i].dir = dir;
+        switch (dir) {
+        case down:
+          mobs[i].y_pos = (-SHIP_H - 1) - ((CANV_H / CELL_SIZE) * rand_range(1, 5));
+          mobs[i].x_pos = C_WIDTH * (rand() % CELL_SIZE) + 2;
+          break;
+        case left:
+          mobs[i].y_pos = rand_range(2, CANV_H - 2);
+          mobs[i].x_pos = CANV_W + (SHIP_W + 1) + ((CANV_W / CELL_SIZE) * rand_range(1, 5));
+          break;
+        case right:
+          mobs[i].y_pos = rand_range(2, CANV_H - 2);
+          mobs[i].x_pos = -(SHIP_W - 1) - ((CANV_W / CELL_SIZE) * rand_range(1, 5));
+          break;
+        case up:
+          mobs[i].y_pos = CANV_H + ((CANV_H / CELL_SIZE) * rand_range(1, 5));
+          mobs[i].x_pos = C_WIDTH * (rand() % CELL_SIZE) + 2;
+          break;
+        default:
+          mobs[i].y_pos = (-SHIP_H - 1) - ((CANV_H / CELL_SIZE) * rand_range(1, 5));
+          mobs[i].x_pos = C_WIDTH * (rand() % CELL_SIZE) + 2;
+          break;
+        }
+      }
+    }
+  }
+
+  // Update projectile positions
+  for (int i = 0; i < PROJ_BUFFER - 1; i++) {
+    if (proj[i].y_pos <= -1 || proj[i].x_pos <= -1 || proj[i].y_pos >= CANV_H || proj[i].x_pos >= CANV_W) {
+      proj[i].y_pos = -1;
+      proj[i].x_pos = -1;
+      continue;
+    }
+    int bull_collision = 0;
+    int index = proj[i].x_pos + ((CANV_W + 1) * proj[i].y_pos);
+    if (canv[index]) {
+      if (canv[index != ' ' && canv[index] != '_']) {
+        for (int j = 0; j < MOB_AM; j++) {
+          int mob_index = mobs[j].x_pos + ((CANV_W + 1) * mobs[j].y_pos);
+          if (abs(mobs[j].y_pos - proj[i].y_pos) < 2 && abs(mobs[j].x_pos - proj[i].x_pos) < 2) {
+            bull_collision = 1;
+            mobs[j].hp--;
+            if (mobs[j].hp == 0)
+              mobs[j].hurt_timer += 10;
+            break;
+          }
+        }
+      }
+      if (bull_collision) {
+        proj[i].x_pos = -1;
+        proj[i].y_pos = -1;
+        continue;
+      }
+      canv[index] = '*';
+    }
+    proj[i].x_pos += proj[i].dir == left || proj[i].dir == up_left || proj[i].dir == down_left ? -2 : proj[i].dir == up || proj[i].dir == down ? 0 : 2;
+    proj[i].y_pos += proj[i].dir == up || proj[i].dir == up_left || proj[i].dir == up_right ? -1 : proj[i].dir == left || proj[i].dir == right ? 0 : 1;
+  }
+
+  // Update stars effects
+  for (int j = 0; j < stars_AM; j++) {
+    int new_rand_index;
+    if (plr->dir == up)
+      new_rand_index = plr->x_pos + 1 + ((plr->y_pos - 3 + SHIP_H) * (CANV_W + 1)) + (rand() % 2);
+    else if (plr->dir == right)
+      new_rand_index = plr->x_pos - 3 + ((CANV_W + 1) * (plr->y_pos + rand() % 2));
+    else if (plr->dir == left)
+      new_rand_index = plr->x_pos + SHIP_W + 3 + ((CANV_W + 1) * (plr->y_pos + rand() % 2));
+    else if (plr->dir == down)
+      new_rand_index = plr->x_pos + 1 + ((plr->y_pos - 3) * (CANV_W + 1)) + (rand() % 2);
+    if (stars[j] < 0 || stars[j] > CANV_SIZE || canv[stars[j]] != ' ' || rand() % 2 == 0)
+      stars[j] = new_rand_index;
+    canv[stars[j]] = rand() % 2 == 0 ? (plr->dir == up || plr->dir == down ? WIND_VER : WIND_HOR) : WIND_DOT;
+    stars[j] += plr->dir == up ? CANV_W + 1 : plr->dir == down ? -CANV_W - 1 : plr->dir == left ? 2 : plr->dir == right ? -2 : 1;
+    if (stars[j] > CANV_SIZE)
+      stars[j] = new_rand_index;
+  }
+}
+
+void render_game(SHIP *plr, SHIP *mobs, SHIP *proj, int *stars, char *canv) {
+  // Render player ship
+  char *plr_txt = draw_triangle('*', plr->dir, SHIP_W, SHIP_H, 0);
+
+  if (plr->hurt_timer > 0) {
+    if (plr->hurt_timer % 3 == 0)
+      print_on_text(plr_txt, canv, plr->x_pos, plr->y_pos);
+    plr->hurt_timer--;
+  } else
+    print_on_text(plr_txt, canv, plr->x_pos, plr->y_pos);
+  free(plr_txt);
+
+  // Render mobs
+  for (int i = 0; i < MOB_AM - 1; i++) {
+    SHIP mob = mobs[i];
+
+    char *mob_tri = draw_triangle('*', mob.dir, SHIP_W, SHIP_H, 1);
+    if (mob.hurt_timer > 0) {
+      int i = 0;
+      while (mob_tri[i]) {
+        if (mob_tri[i] != ' ' && mob_tri[i] != '\n')
+          mob_tri[i] = EXPL_START;
+        i++;
+      }
+    }
+
+    if (mob.x_pos - SHIP_W > 0 && mob.x_pos < CANV_W && mob.y_pos - SHIP_H < CANV_H && mob.y_pos < CANV_H)
+      print_on_text(mob_tri, canv, mob.x_pos, mob.y_pos);
+    free(mob_tri);
+  }
+}
+
+
+
+#ifndef HEADER_H
+#define HEADER_H
+
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/select.h>
+#include <termios.h>
+#include <time.h>
+#include <unistd.h>
+
+// COLORS
+#define RED "\033[31m"
+#define BRIGHT_RED "\033[91m"
+#define GREEN "\033[32m"
+#define YELLOW "\033[33m"
+#define BLUE "\033[34m"
+#define LIGHT_BLUE "\033[38;5;117m"
+#define DIM_WHITE "\033[38;5;250m"
+#define PALE_YELLOW "\033[38;5;229m"
+#define SOFT_BLUE "\033[38;5;153m"
+#define MAGENTA "\033[35m"
+#define CYAN "\033[36m"
+#define WHITE "\033[37m"
+#define ORANGE "\033[38;5;214m"
+#define BROWN "\033[38;5;94m"
+#define DARK_GREEN "\033[38;5;22m"
+#define FULL_BLOCK "\u25A0"
+#define BLACK_SQUARE "\u25FC"
+#define WHITE_SQUARE "\u25FB"
+#define LIGHT_SHADE "\u2591"
+#define MEDIUM_SHADE "\u2592"
+#define DARK_SHADE "\u2593"
+
+#define PLR_MAX_HP 5
+#define MOB_MAX_HP 1
+
+#define HURT_DUR 50
+#define stars_AM 20
+#define MOB_AM 10
+#define PROJ_BUFFER 20
+#define LOOT_BUFFER 2
+#define STAR_BUFFER 50
+
+#define SAVEFILE "savefile.txt"
+#define STRT_LOOT_CHNC 400
+#define CELL_AM 8
+#define CANV_W 100
+#define CANV_H (CANV_W / 2)
+#define CANV_SIZE (CANV_W + (CANV_H * CANV_W))
+#define CELL_SIZE (CANV_W / CELL_AM)
+#define C_WIDTH (CANV_W / CELL_SIZE)
+#define C_HEIGHT (CANV_H / CELL_SIZE)
+#define SHIP_W (C_HEIGHT - 2)
+#define SHIP_H (C_WIDTH - 2)
+#define SHOW_GRID 0
+
+#define HEART_IC '>'
+#define HEART_CODE "\u2764"
+
+#define shot_lock 50
+
+#define MOB_LBORD 'm'
+#define MOB_RBORD 'M'
+#define MOB_HOR 'x'
+#define MOB_VER 'X'
+
+#define EXPL_START 'b'
+
+#define WIND_VER 'V'
+#define WIND_HOR 'h'
+#define WIND_DOT 'i'
+
+#define CANV_HOR 'c'
+#define CANV_VER 'l'
+
+#define SHP_L                                                                                                                                                                                                                                            \
+  "||\\\n"                                                                                                                                                                                                                                               \
+  "||/\0"
+
+#define SHP_R                                                                                                                                                                                                                                            \
+  "/||\n"                                                                                                                                                                                                                                                \
+  "\\||\0"
+
+#define MOR_SCR_IC "SCR++\0"
+#define WEAP_IC "WEP++\0"
+#define MOR_MOR_SHLD_IC "SD++\0"
+#define MOR_HP_IC ">"
+#define MOR_ATTR_IC "^"
+#define BET_PRJ_IC "z"
+
+typedef enum { MOR_SCR, MOR_HP, MOR_PRJ, MOR_MOR_SHLD, MOR_ATTR, BET_PRJ } Loot_Type;
+typedef enum { up, down, right, left, none, up_left, up_right, down_left, down_right } DIR;
+
+typedef struct {
+  int hp;
+  int hurt_timer;
+  int x_pos;
+  int y_pos;
+  int height;
+  int weight;
+  int MOR_SHLD;
+  int prj_qual;
+  int weap;
+  DIR dir;
+} SHIP;
+
+typedef struct {
+  Loot_Type type;
+  char *content;
+  int x_pos;
+  int y_pos;
+} LOOT;
+
+typedef struct {
+  int x_pos;
+  int y_pos;
+  DIR dir;
+} PROJ;
+
+typedef struct {
+  int attr;
+  int shots_fired;
+  int level;
+  long int score;
+  long int max_score;
+} GAME;
+
+void set_nonblocking_mode(int enable);
+char *draw_triangle(char interior, DIR dir, int h, int w, int color);
+char *init_blank_canv(int w, int h, int has_ext);
+int get_width(char *src);
+int get_height(char *src);
+int crop_x(char *src, int from_x);
+char *erase_on_text(char *src, int new_width);
+int print_on_text(char *src, char *dst, int x_pos, int y_pos);
+int rand_range(int min, int max);
+int is_position_occupied(SHIP *mobs, int current_mob, int x, int y);
+void print_colored_text(char *c, char cc, char *color);
+
+#endif
