@@ -64,7 +64,7 @@ int main() {
     for (int y = 0; y < CELL_SIZE; y++) {
       for (int x = 0; x < CELL_SIZE; x++) {
         char *cell = init_blank_canv(CANV_W / CELL_SIZE, CANV_H / CELL_SIZE, show_grid);
-        print_on_text(cell, canv, (CANV_W / CELL_SIZE) * x, (CANV_H / CELL_SIZE) * y);
+        add_to_canv(cell, canv, (CANV_W / CELL_SIZE) * x, (CANV_H / CELL_SIZE) * y);
         free(cell);
       }
     }
@@ -80,7 +80,7 @@ int main() {
     int start_index = CANV_W + 2;
     for (int x = 0; x < PLR_MAX_HP; x++) {
       start_index += 2;
-      header[start_index] = plr.hp > x ? HEART_IC : '.';
+      header[start_index] = plr.hp > x ? HEART_IC_IC : '.';
     }
     start_index += 4;
     char scr[] = "SCR.";
@@ -120,7 +120,7 @@ int main() {
     char Wp[] = "Wp. ";
     for (int i = 0; i < 4; i++)
       canv[start_index++] = Wp[i];
-    sc = plr.weap;
+    sc = plr.WEAP_IC;
     do {
       header[start_index--] = (sc % 10) + '0';
       sc /= 10;
@@ -140,7 +140,7 @@ int main() {
     char *mob_color1 = game.level < 5 ? BLUE : game.level < 10 ? GREEN : game.level < 15 ? YELLOW : game.level < 20 ? ORANGE : game.level < 25 ? RED : MAGENTA;
     char *mob_color2 = game.level < 5 ? LIGHT_BLUE : game.level < 10 ? DARK_GREEN : game.level < 15 ? PALE_YELLOW : game.level < 20 ? RED : game.level < 25 ? BROWN : CYAN;
 
-    print_on_text(header, canv, 0, 0);
+    add_to_canv(header, canv, 0, 0);
     while (canv[i]) {
       if (canv[i] == WIND_DOT || canv[i] == WIND_VER || canv[i] == WIND_HOR)
         print_colored_text(NULL, canv[i] == WIND_DOT ? '.' : canv[i] == WIND_VER ? '|' : '-', rand() % 2 == 0 ? RED : ORANGE);
@@ -156,8 +156,8 @@ int main() {
         print_colored_text(NULL, '_', rand() % 2 == 0 ? mob_color1 : mob_color2);
       else if (canv[i] == MOB_VER)
         print_colored_text(NULL, '|', rand() % 2 == 0 ? mob_color1 : mob_color2);
-      else if (canv[i] == HEART_IC)
-        print_colored_text(HEART_CODE, '\0', RED);
+      else if (canv[i] == HEART_IC_IC)
+        print_colored_text(HEART_IC_CODE, '\0', RED);
       else if (canv[i] == EXPL_START || canv[i + 1] == EXPL_START || canv[i - 1] == EXPL_START || canv[i + CANV_W + 1] == EXPL_START || canv[i - CANV_W - 1] == EXPL_START) {
         game.score += 10;
         int r = rand_range(0, 4);
@@ -191,14 +191,14 @@ void initialize_game(GAME *game, SHIP *plr, LOOT *loots, SHIP *mobs, SHIP *proj,
   game->level = 0;
   game->score = 0;
   game->max_score = 0;
-  game->attr = 3;
+  game->ATTR_IC = 3;
 
   plr->x_pos = C_WIDTH * 4 + 2;
   plr->y_pos = C_HEIGHT * 8 + 1;
   plr->hp = PLR_MAX_HP;
   plr->hurt_timer = 0;
   plr->MOR_SHLD = 0;
-  plr->weap = 0;
+  plr->WEAP_IC = 0;
   plr->dir = up;
   plr->prj_qual = 0;
 
@@ -207,12 +207,12 @@ void initialize_game(GAME *game, SHIP *plr, LOOT *loots, SHIP *mobs, SHIP *proj,
     do {
       x = C_WIDTH * (rand() % CELL_SIZE) + 2;
       y = (-SHIP_H - 1) - ((CANV_H / CELL_SIZE) * rand_range(1, 5));
-    } while (is_position_occupied(mobs, i, x, y));
+    } while (is_position_o__upied(mobs, i, x, y));
     mobs[i].x_pos = x;
     mobs[i].y_pos = y;
     mobs[i].dir = down;
     mobs[i].MOR_SHLD = 0;
-    mobs[i].weap = 0;
+    mobs[i].WEAP_IC = 0;
     mobs[i].hp = MOB_MAX_HP;
     mobs[i].hurt_timer = 0;
   }
@@ -250,41 +250,41 @@ int handle_input(GAME *game, SHIP *plr, int *has_moved, SHIP *proj) {
         plr->dir = down;
         *has_moved = CANV_H / CELL_SIZE;
       } else if (c == ' ') {
-        if (plr->weap > 0 && game->shots_fired > 0)
+        if (plr->WEAP_IC > 0 && game->shots_fired > 0)
           game->shots_fired--;
         if (game->shots_fired == 0) {
-          if (plr->weap > 0)
-            plr->weap--;
+          if (plr->WEAP_IC > 0)
+            plr->WEAP_IC--;
           game->shots_fired = shot_lock;
         }
-        int w_prj = plr->weap;
+        int w_prj = plr->WEAP_IC;
         for (int i = 0; i < PROJ_BUFFER; i++) {
-          DIR dir = w_prj == plr->weap       ? plr->dir
-                    : w_prj == plr->weap - 1 ? plr->dir == up     ? down
+          DIR dir = w_prj == plr->WEAP_IC       ? plr->dir
+                    : w_prj == plr->WEAP_IC - 1 ? plr->dir == up     ? down
                                                : plr->dir == down ? up
                                                : plr->dir == left ? right
                                                                   : left
-                    : w_prj == plr->weap - 2 ? plr->dir == up     ? left
+                    : w_prj == plr->WEAP_IC - 2 ? plr->dir == up     ? left
                                                : plr->dir == down ? right
                                                : plr->dir == left ? up
                                                                   : down
-                    : w_prj == plr->weap - 3 ? plr->dir == up     ? right
+                    : w_prj == plr->WEAP_IC - 3 ? plr->dir == up     ? right
                                                : plr->dir == down ? left
                                                : plr->dir == left ? down
                                                                   : up
-                    : w_prj == plr->weap - 4 ? plr->dir == up     ? up_right
+                    : w_prj == plr->WEAP_IC - 4 ? plr->dir == up     ? up_right
                                                : plr->dir == down ? up_left
                                                : plr->dir == left ? down_left
                                                                   : down_right
-                    : w_prj == plr->weap - 5 ? plr->dir == up     ? up_left
+                    : w_prj == plr->WEAP_IC - 5 ? plr->dir == up     ? up_left
                                                : plr->dir == down ? up_right
                                                : plr->dir == left ? down_right
                                                                   : down_left
-                    : w_prj == plr->weap - 6 ? plr->dir == up     ? down_left
+                    : w_prj == plr->WEAP_IC - 6 ? plr->dir == up     ? down_left
                                                : plr->dir == down ? down_right
                                                : plr->dir == left ? up_left
                                                                   : up_right
-                    : w_prj == plr->weap - 7 ? plr->dir == up     ? down_right
+                    : w_prj == plr->WEAP_IC - 7 ? plr->dir == up     ? down_right
                                                : plr->dir == down ? down_left
                                                : plr->dir == left ? up_right
                                                                   : up_left
@@ -322,7 +322,7 @@ void update_game_state(GAME *game, SHIP *plr, LOOT *loots, int has_moved, SHIP *
   for (int i = 0; i < LOOT_BUFFER; i++) {
     if (loots[i].x_pos == -1 && loots[i].y_pos == -1)
       continue;
-    print_on_text(loots[i].content, canv, loots[i].x_pos, loots[i].y_pos);
+    add_to_canv(loots[i].content, canv, loots[i].x_pos, loots[i].y_pos);
     int x_diff = loots[i].x_pos - plr->x_pos;
     int y_diff = loots[i].y_pos - plr->y_pos;
     if (abs(x_diff) < 3 && abs(y_diff) < 3) {
@@ -337,9 +337,9 @@ void update_game_state(GAME *game, SHIP *plr, LOOT *loots, int has_moved, SHIP *
       if (loots[i].type == BET_PRJ)
         plr->prj_qual++;
       if (loots[i].type == MOR_ATTR)
-        game->attr++;
+        game->ATTR_IC++;
       if (loots[i].type == MOR_PRJ) {
-        plr->weap++;
+        plr->WEAP_IC++;
         game->shots_fired += shot_lock;
       }
     }
@@ -489,10 +489,10 @@ void render_game(SHIP *plr, SHIP *mobs, SHIP *proj, int *stars, char *canv) {
 
   if (plr->hurt_timer > 0) {
     if (plr->hurt_timer % 3 == 0)
-      print_on_text(plr_txt, canv, plr->x_pos, plr->y_pos);
+      add_to_canv(plr_txt, canv, plr->x_pos, plr->y_pos);
     plr->hurt_timer--;
   } else
-    print_on_text(plr_txt, canv, plr->x_pos, plr->y_pos);
+    add_to_canv(plr_txt, canv, plr->x_pos, plr->y_pos);
   free(plr_txt);
 
   // Render mobs
@@ -510,7 +510,7 @@ void render_game(SHIP *plr, SHIP *mobs, SHIP *proj, int *stars, char *canv) {
     }
 
     if (mob.x_pos - SHIP_W > 0 && mob.x_pos < CANV_W && mob.y_pos - SHIP_H < CANV_H && mob.y_pos < CANV_H)
-      print_on_text(mob_tri, canv, mob.x_pos, mob.y_pos);
+      add_to_canv(mob_tri, canv, mob.x_pos, mob.y_pos);
     free(mob_tri);
   }
 }
@@ -576,8 +576,8 @@ void render_game(SHIP *plr, SHIP *mobs, SHIP *proj, int *stars, char *canv) {
 #define SHIP_H (C_WIDTH - 2)
 #define SHOW_GRID 0
 
-#define HEART_IC '>'
-#define HEART_CODE "\u2764"
+#define HEART_IC_IC '>'
+#define HEART_IC_CODE "\u2764"
 
 #define shot_lock 50
 
@@ -622,7 +622,7 @@ typedef struct {
   int weight;
   int MOR_SHLD;
   int prj_qual;
-  int weap;
+  int WEAP_IC;
   DIR dir;
 } SHIP;
 
@@ -640,7 +640,7 @@ typedef struct {
 } PROJ;
 
 typedef struct {
-  int attr;
+  int ATTR_IC;
   int shots_fired;
   int level;
   long int score;
@@ -654,9 +654,9 @@ int get_width(char *src);
 int get_height(char *src);
 int crop_x(char *src, int from_x);
 char *erase_on_text(char *src, int new_width);
-int print_on_text(char *src, char *dst, int x_pos, int y_pos);
+int add_to_canv(char *src, char *dst, int x_pos, int y_pos);
 int rand_range(int min, int max);
-int is_position_occupied(SHIP *mobs, int current_mob, int x, int y);
-void print_colored_text(char *c, char cc, char *color);
+int is_position_o__upied(SHIP *mobs, int current_mob, int x, int y);
+void print_colored_text(char *c, char __, char *color);
 
 #endif

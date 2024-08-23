@@ -1,1 +1,13 @@
-ColumnLimit: 220
+BraceWrapping:
+  AfterControlStatement: true
+  IndentBraces:    false
+BreakBeforeBraces: Attach 
+
+IndentCaseLabels: true
+
+AllowShortIfStatementsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: false
+
+PenaltyBreakBeforeFirstCallParameter: 1000
+ColumnLimit: 200
+PenaltyExcessCharacter: 1000 
