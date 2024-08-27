@@ -1,6 +1,6 @@
 #ifndef AS__I_H
 #define AS__I_H
-#include "header.h"
+#include "includes.h"
 
 #define LV_MSG                                                                                                                                                                                         \
   " _____   _______ ___ ___ _______ _____        _______ ______      __ \n"                                                                                                                            \
@@ -8,12 +8,71 @@
   "|       |    ___|   |   |    ___|       |    |   |   |    __/    |__|\n"                                                                                                                            \
   "|_______|_______|\\_____/|_______|_______|    |_______|___|       |__|\0"
 
-#define SHP_L                                                                                                                                                                                          \
+#define SHP_R                                                                                                                                                                                          \
   "||\\\n"                                                                                                                                                                                             \
   "||/\0"
-#define SHP_R                                                                                                                                                                                          \
+#define SHP_L                                                                                                                                                                                          \
   "/||\n"                                                                                                                                                                                              \
   "\\||\0"
+
+#define SHP_D                                                                                                                                                                                          \
+  "____\n"                                                                                                                                                                                             \
+  "\\##/\n"                                                                                                                                                                                            \
+  " \\/\0"
+
+#define SHP_U                                                                                                                                                                                          \
+  " /\\\n"                                                                                                                                                                                             \
+  "/__\\\0"
+
+#define MBSHP_R                                                                                                                                                                                        \
+  "\xF4\xF4\xF5||\\\n"                                                                                                                                                                                 \
+  "\xF4\xF4\xF5||/\0"
+#define MBSHP_L                                                                                                                                                                                        \
+  "/||\xF5\xF4\xF4\n"                                                                                                                                                                                  \
+  "\\||\xF5\xF4\xF4\0"
+
+#define MB2_L                                                                                                                                                                                          \
+  "  /\\\n"                                                                                                                                                                                            \
+  ",/  \\,\xF5\xF4\xF4\n"                                                                                                                                                                              \
+  "| <> |\xF5\xF4\xF4\n"                                                                                                                                                                               \
+  "'\\  /'\xF5\xF4\xF4'\n"                                                                                                                                                                             \
+  "  \\/\0"
+
+#define MB2_R                                                                                                                                                                                          \
+  "     /\\\n"                                                                                                                                                                                         \
+  "\xF4\xF4\xF5,/  \\,\n"                                                                                                                                                                              \
+  "\xF4\xF4\xF5| <> |\n"                                                                                                                                                                               \
+  "\xF4\xF4\xF5'\\  /'\n"                                                                                                                                                                              \
+  "     \\/\0"
+
+#define MB2_U                                                                                                                                                                                          \
+  " /\\\n"                                                                                                                                                                                             \
+  "|/\\|\n"                                                                                                                                                                                            \
+  "|\\/|\n"                                                                                                                                                                                            \
+  "'\\/'\n"                                                                                                                                                                                            \
+  " \xF5\xF5\n"                                                                                                                                                                                        \
+  " \xF3\xF3\0"
+
+#define MB2_D                                                                                                                                                                                          \
+  " \xF3\xF3\n"                                                                                                                                                                                        \
+  " \xF5\xF5\n"                                                                                                                                                                                        \
+  " /\\\n"                                                                                                                                                                                             \
+  "|/\\|\n"                                                                                                                                                                                            \
+  "|\\/|\n"                                                                                                                                                                                            \
+  "'\\/'\0"
+
+#define MBSHP_D                                                                                                                                                                                        \
+  " \xF3\xF3\n"                                                                                                                                                                                        \
+  " \xF5\xF5\n"                                                                                                                                                                                        \
+  "____\n"                                                                                                                                                                                             \
+  "\\##/\n"                                                                                                                                                                                            \
+  " \\/\0"
+
+#define MBSHP_U                                                                                                                                                                                        \
+  " /\\\n"                                                                                                                                                                                             \
+  "/__\\\n"                                                                                                                                                                                            \
+  " \xF5\xF5\n"                                                                                                                                                                                        \
+  " \xF3\xF3\0"
 
 #define LUCK_GFX                                                                                                                                                                                       \
   "    .-. .-.\n"                                                                                                                                                                                      \
