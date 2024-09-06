@@ -1,30 +1,123 @@
 #include "../headers/includes.h"
 
-void render_game(GAME game, BOSS boss, SHIP *plr, SHIP *mobs, PROJ *proj, PROJ *mobprj, int *wind, char *canv) {
-  (void)boss, (void)proj, (void)mobprj, (void)wind;
-  // Render player ship
-  char *plr_txt = get_triangle('*', game.mv_type == watch_up ? up : plr->lk_dir, SHIP_W, SHIP_H, 2);
-  if (plr->shield) {
-    char *circ = get_circle(SHIP_W + 6, SHIP_W + 6, plr->shield <= 2 ? PLR_SHLD_OUTL : plr->shield <= 4 ? PLR_SHLD_OUTL1 : PLR_SHLD_OUTL2, (float)plr->shield / 6);
-    write_on_canv(circ, canv, plr->x_pos - 3, plr->y_pos - 4);
-    free(circ);
+void render_npcs(GAME *game, BOSS boss, SHIP *plr, SHIP *mobs, BLDING *bldings, PROJ *proj, PROJ *mobprj, int *wind, char *canv, int time, int has_moved, int aftr_plr) {
+
+  // Render NPCs
+  if (game->cur_bld_index != 0) {
+    char *bub_BG = NULL;
+    int x_dial = 0, y_dial = 0, bld_ind = game->cur_bld_index;
+    for (int i = 0; i < bldings[bld_ind].npc_am; i++) {
+      BLDING *bld = &bldings[bld_ind];
+      NPC *n = &bldings[bld_ind].npcs[i];
+      int x = n->x_p + bldings[bld_ind].x_pos;
+      int y = n->y_p + bldings[bld_ind].y_pos;
+      if (n->floor != game->cur_floor) continue;
+      if (aftr_plr ? y < plr->y_pos - 3 : y > plr->y_pos - 3) continue;
+
+      if (abs(y - plr->y_pos) < 8 && abs(x - plr->x_pos) < 8) {
+        if (game->input == 't' && (game->is_in_dialog != -1 && game->is_in_dialog != i)) {
+          game->is_in_dialog = i;
+          game->input = '\0';
+        }
+        if (game->input == ' ' && (game->is_in_dialog == -1) || game->is_in_dialog == i) {
+          if (game->is_in_dialog == -1) {
+            free(n->text);
+            BLD_TYPE tp = bldings[bld_ind].type;
+            if (n->type == SELLER) {
+              n->text = strdup(tp == SHOP ? slr_dlgs[rand_range(0, 14)] : forg_dlgs[rand_range(0, 13)]);
+              game->cur_seller = n;
+            } else
+              n->text = strdup(tp == FORTRESS ? adv_dlgs[rand_range(0, 20)] : tp == SHOP || tp == ARMORY ? shpr_dlgs[rand_range(0, 20)] : expl_dlgs[rand_range(0, 20)]);
+          }
+
+          char *txt = strdup(n->text);
+          int tx_len = strlen(txt);
+          int tx_w = get_width(txt), tx_h = get_height(txt);
+          bub_BG = init_blank_canv(tx_w + 5, tx_h + 4, 0, ' ');
+          char *bub = init_blank_canv(tx_w + 4, tx_h + 3, 1, '#');
+          write_on_canv("###", bub, (tx_w + 4) / 2 + 2, tx_h + 2);
+          write_on_canv("\\/", bub_BG, (tx_w + 4) / 2 + 3, tx_h + 3);
+
+          write_on_canv(bub, bub_BG, 0, 0);
+
+          x_dial = x - ((tx_w + 4) / 2);
+          y_dial = y - (tx_h + 4);
+
+          write_on_canv(txt, bub_BG, 2, 1), free(txt), free(bub);
+          game->is_in_dialog = i;
+        } else {
+          write_on_canv(" ___\n|#!#|\n#---", canv, x + 2, y - 3);
+          if (game->is_in_dialog == i) game->is_in_dialog = -1;
+        }
+
+        if (game->is_in_dialog == i || has_moved) {
+          int x_diff = (x - plr->x_pos) / 2, y_diff = (y + 4) - plr->y_pos;
+          if (abs(x_diff) > abs(y_diff)) {
+            n->lk_dir = (x_diff < 0) ? right : left;
+          } else {
+            n->lk_dir = (y_diff < 0) ? down : up;
+          }
+          if (has_moved)
+            n->dir = none;
+          else {
+            DIR d = n->lk_dir;
+            plr->lk_dir = d == down ? up : d == up ? down : d == left ? right : left;
+          }
+        }
+      } else {
+        if (game->is_in_dialog == i) game->is_in_dialog = -1;
+      }
+
+      if (game->is_in_dialog != i) {
+        if (rand() % 200 == 0) n->lk_dir = rand() % 4;
+        if (rand() % 50 == 0 && n->type != SELLER) n->dir = n->lk_dir;
+      } else
+        n->dir = none;
+
+      if (n->dir != none && time % 5 == 0) {
+        if (!is_in_canv(x, y, 6, 6, bld->x_pos, bld->y_pos, get_width(bld->floors[0]), get_height(bld->floors[0]), n->dir)) {
+          n->y_p += n->dir == up ? 1 : n->dir == down ? -1 : 0;
+          n->x_p += n->dir == left ? 1 : n->dir == right ? -1 : 0;
+          n->lk_dir = n->dir == up ? down : n->dir == left ? right : n->dir == down ? up : left, n->dir = none;
+        } else {
+          n->x_p += n->dir == left ? -1 : n->dir == right ? 1 : 0;
+          n->y_p += n->dir == up ? -1 : n->dir == down ? 1 : 0;
+        }
+        if (rand() % 20 == 0) n->dir = none;
+      }
+
+      DIR d = n->lk_dir;
+      char *curB;
+      if (n->dir != none) {
+        curB = strdup(n->dir == left    ? time % 20 >= 10 ? plr_mv_left1 : plr_mv_left2
+                      : n->dir == right ? time % 20 >= 10 ? plr_mv_right1 : plr_mv_right2
+                      : n->dir == up    ? time % 20 >= 10 ? plr_mv_up1 : plr_mv_up2
+                      : time % 20 >= 10 ? plr_mv_down1
+                                        : plr_mv_down2);
+      } else
+        curB = strdup(d == up ? n->up_bdy : d == left ? n->lft_bdy : d == right ? n->rgt_bdy : n->dwn_bdy);
+      write_on_canv(curB, canv, x, y);
+      free(curB);
+    }
+    if (bub_BG != NULL) {
+      write_on_canv(bub_BG, canv, x_dial, y_dial);
+      free(bub_BG);
+    }
   }
-  if (plr->hurt_timer > 0) {
-    if (plr->hurt_timer % 3 == 0) write_on_canv(plr_txt, canv, plr->x_pos, plr->y_pos);
-    plr->hurt_timer--;
-  } else
-    write_on_canv(plr_txt, canv, plr->x_pos, plr->y_pos);
-  free(plr_txt);
+}
+
+void render_game(GAME *game, BOSS boss, SHIP *plr, SHIP *mobs, BLDING *bldings, PROJ *proj, PROJ *mobprj, int *wind, char *canv, int time, int has_moved) {
+  (void)boss, (void)proj, (void)mobprj, (void)wind;
 
   // Render mobs
-  if (!game.is_in_boss_fight) {
+  if (game->g_st != boss_fight) {
     for (int i = 0; i < MOBS_BUFFER - 1; i++) {
       SHIP mob = mobs[i];
       char *mob_tri;
       if (i <= MOBS1_BUFFER)
         mob_tri = get_triangle('*', mob.dir, SHIP_W, SHIP_H, 1);
       else
-        mob_tri = mob.dir == left ? strdup(MB2_L) : mob.dir == right ? strdup(MB2_R) : mob.dir == up ? strdup(MB2_U) : strdup(MB2_D);
+        mob_tri = mob.dir == up ? strdup(MB2_U) : mob.dir == down ? strdup(MB2_D) : mob.dir == left || mob.dir == up_left || mob.dir == down_left ? strdup(MB2_L) : strdup(MB2_R);
       if (mob.hurt_timer > 0) set_text_red(mob_tri);
       if (mob.hurt_timer > 0) {
         int i = 0;
@@ -33,11 +126,68 @@ void render_game(GAME game, BOSS boss, SHIP *plr, SHIP *mobs, PROJ *proj, PROJ *
           i++;
         }
       }
-      if (mob.x_pos - SHIP_W > 0 && mob.x_pos < CANV_W && mob.y_pos - SHIP_H < CANV_H && mob.y_pos < CANV_H) write_on_canv(mob_tri, canv, mob.x_pos, mob.y_pos);
+      if (mob.x_pos - SHIP_W > 0 && mob.x_pos < CANV_W && mob.y_pos - SHIP_H < CANV_H && mob.y_pos < CANV_H && canv[i] != 'N' && canv[i] != '#') write_on_canv(mob_tri, canv, mob.x_pos, mob.y_pos);
       if (mob_tri != NULL) free(mob_tri);
     }
   }
-  // Render projectiles and wind effects are handled in upd_game_state()
+
+  // RENDER INSIDE OF BUILDING
+  if (game->cur_blding != NONE) {
+    BLDING *bld = &bldings[game->cur_bld_index];
+    char *tmp = strdup(bld->floors[game->cur_floor]);
+    write_on_canv(tmp, canv, bld->x_pos, bld->y_pos);
+    if (tmp != NULL) free(tmp);
+    int i = 0;
+    while (canv[i]) {
+      if (canv[i] != '\n' && canv[i] == ' ') canv[i] = i % 5 == 0 ? WIND_DOT : ' ';
+      i++;
+    }
+  } // RENDER OUTSIDE
+  else {
+    for (int i = 0; i < BLDING_BUFFER; i++) {
+      BLDING *bld = &bldings[i];
+      int is_inside = game->cur_bld_index == i;
+      if ((bld->x_pos < CANV_W - 1 && bld->x_pos + bld->x_size > 1) && (bld->y_pos < CANV_H - 1 && bld->y_pos + bld->y_size > 1)) {
+        char *tmp = strdup(is_inside ? bld->floors[game->cur_floor] : bld->ext_cont);
+        write_on_canv(tmp, canv, bld->x_pos, bld->y_pos);
+        if (tmp != NULL) free(tmp);
+      }
+    }
+  }
+
+  upd_collisions(canv, game, proj, &boss, mobs, mobprj, plr);
+
+  render_npcs(game, boss, plr, mobs, bldings, proj, mobprj, wind, canv, time, has_moved, 0);
+  // Render player ship
+  if (game->cur_bld_index == -1) {
+    char *plr_txt = get_triangle('*', game->mv_type == watch_up ? up : plr->lk_dir, SHIP_W, SHIP_H, 2);
+    if (plr->shield) {
+      char *circ = get_circle(SHIP_W + 6, SHIP_W + 6, plr->shield <= 2 ? PLR_SHLD_OUTL : plr->shield <= 4 ? PLR_SHLD_OUTL1 : PLR_SHLD_OUTL2, (float)plr->shield / 6);
+      write_on_canv(circ, canv, plr->x_pos - 3, plr->y_pos - 4);
+      free(circ);
+    }
+    if (plr->hurt_timer > 0) {
+      if (plr->hurt_timer % 3 == 0) write_on_canv(plr_txt, canv, plr->x_pos, plr->y_pos);
+      plr->hurt_timer--;
+    } else
+      write_on_canv(plr_txt, canv, plr->x_pos, plr->y_pos);
+    free(plr_txt);
+  } else {
+    DIR d = plr->lk_dir;
+    char *curB;
+    if (plr->dir != none) {
+      curB = strdup(plr->dir == left    ? time % 20 >= 10 ? plr_mv_left1 : plr_mv_left2
+                    : plr->dir == right ? time % 20 >= 10 ? plr_mv_right1 : plr_mv_right2
+                    : plr->dir == up    ? time % 20 >= 10 ? plr_mv_up1 : plr_mv_up2
+                    : time % 20 >= 10   ? plr_mv_down1
+                                        : plr_mv_down2);
+    } else
+      curB = strdup(d == up ? plr_idle_up : d == left ? plr_idle_left : d == right ? plr_idle_right : plr_idle_down1);
+    color_text(red, curB, 0);
+    write_on_canv(curB, canv, plr->x_pos, plr->y_pos - 4);
+    free(curB);
+  }
+  render_npcs(game, boss, plr, mobs, bldings, proj, mobprj, wind, canv, time, has_moved, 1);
 }
 
 int render_canvas(char *canv, GAME *game, int time) {
@@ -49,47 +199,62 @@ int render_canvas(char *canv, GAME *game, int time) {
   int i = 0;
   while (canv[i]) {
     char c = canv[i];
-    if (c == '#')
-      printf(" ");
-    else if (c == COL_HOR || c == COL_VER)
-      render_text_in_color(NULL, canv[i] == COL_HOR ? '_' : '|', rand() % 4 == 0 ? MAGENTA : rand() % 4 == 0 ? BLUE : GREEN);
-
-    // BASE PROJ
+    if (c == '#') printf(" ");
+    // PROJECTILES
     else if (c == PRJ_BS_HOR || c == PRJ_BS_VER || c == PRJ_BS_DIAG_L || c == PRJ_BS_DIAG_R)
       render_text_in_color(NULL, c == PRJ_BS_HOR ? '_' : c == PRJ_BS_VER ? '|' : c == PRJ_BS_DIAG_L ? '\\' : '/', rand() % 2 == 0 ? RED : ORANGE);
-    // MAGN PROJ
     else if (c == PRJ_MAGN_HOR || c == PRJ_MAGN_VER || c == PRJ_MAGN_DIAG_L || c == PRJ_MAGN_DIAG_R)
       render_text_in_color(NULL, 'o', rand() % 2 == 0 ? MAGENTA : YELLOW);
-    // BOMB PROJ
+    else if (c == PRJ_BIG_HOR || c == PRJ_BIG_VER || c == PRJ_BIG_DIAG_L || c == PRJ_BIG_DIAG_R)
+      render_text_in_color(NULL, rand_range(33, 76), rand() % 2 == 0 ? GREEN : LIGHT_BLUE);
     else if (c == PRJ_BMB_HOR || c == PRJ_BMB_VER || c == PRJ_BMB_DIAG_L || c == PRJ_BMB_DIAG_R) {
       int r = rand_range(0, 4);
       render_text_in_color(NULL, r == 0 ? 'O' : r == 1 ? '#' : r == 2 ? '*' : '$', rand() % 2 == 0 ? YELLOW : ORANGE);
     }
-    // BIG PROJ
-    else if (c == PRJ_BIG_HOR || c == PRJ_BIG_VER || c == PRJ_BIG_DIAG_L || c == PRJ_BIG_DIAG_R)
-      render_text_in_color(NULL, rand_range(33, 76), rand() % 2 == 0 ? GREEN : LIGHT_BLUE);
 
     // BASE MOB PROJ
     else if (c == MPRJ_BS_HOR || c == MPRJ_BS_VER || c == MPRJ_BS_DIAG_L || c == MPRJ_BS_DIAG_R)
-      render_text_in_color(NULL, c == MPRJ_BS_HOR ? '_' : c == MPRJ_BS_VER ? game->is_in_boss_fight ? 'O' : '|' : c == MPRJ_BS_DIAG_L ? '\\' : '/', rand() % 2 == 0 ? mob_color1 : mob_color2);
+      render_text_in_color(NULL, c == MPRJ_BS_HOR ? '_' : c == MPRJ_BS_VER ? game->g_st == boss_fight ? 'O' : '|' : c == MPRJ_BS_DIAG_L ? '\\' : '/', rand() % 2 == 0 ? mob_color1 : mob_color2);
+
+    // WIND, STARS
     else if (c == WIND_DOT || c == WIND_VER || c == WIND_HOR)
       render_text_in_color(NULL, c == WIND_DOT ? '.' : c == WIND_VER ? '|' : '-', rand() % 2 == 0 ? plr_color1 : plr_color2);
-    else if (c == CANV_VER || c == CANV_HOR)
-      printf(c == CANV_VER ? "|" : "_");
-    else if (c == PLR_SHLD_OUTL)
-      render_text_in_color(NULL, '.', rand() % 2 == 0 ? BLUE : LIGHT_BLUE);
     else if (c == STAR_IC || c == STAR_IC2)
       render_text_in_color(NULL, c == STAR_IC ? '+' : '.', rand() % 2 == 0 ? YELLOW : PALE_YELLOW);
+    else if (c == WIND_ALL_VER)
+      render_text_in_color(NULL, time % 36 >= 15 ? '.' : time % 25 >= 10 ? 'l' : ' ', rand() % 2 == 0 ? plr_color1 : plr_color2);
+    else if (c == WIND_ALL_HOR)
+      render_text_in_color(NULL, time % 24 >= 18 ? '.' : time % 15 >= 12 ? '-' : ' ', rand() % 2 == 0 ? plr_color1 : plr_color2);
+    else if (c == WIND_ALL_DOT)
+      render_text_in_color(NULL, time % 28 >= 80 ? '.' : time % 37 >= 20 ? ',' : ' ', rand() % 2 == 0 ? plr_color1 : plr_color2);
+
+    // PLR SHIELD
+    else if (c == PLR_SHLD_OUTL)
+      render_text_in_color(NULL, '.', rand() % 2 == 0 ? BLUE : LIGHT_BLUE);
     else if (c == PLR_SHLD_OUTL1)
       render_text_in_color(NULL, '.', rand() % 2 == 0 ? GREEN : DARK_GREEN);
     else if (c == PLR_SHLD_OUTL2)
       render_text_in_color(NULL, '.', rand() % 2 == 0 ? RED : ORANGE);
+
+    // COLLIDERS; BORDERS
+    else if (c == CANV_VER || c == CANV_HOR || c == VRT_WALL || c == HOR_WALL)
+      printf(c == CANV_VER || c == VRT_WALL ? "|" : "_");
+    else if (c == DWNLFT_WALL || c == DWNRGT_WALL || c == UPLFT_WALL || c == UPRGT_WALL)
+      printf(".");
+    else if (c == UPSTAIR_IC || c == DWNSTAIR_IC)
+      printf("_");
+    else if (c == COL_HOR || c == COL_VER)
+      render_text_in_color(NULL, canv[i] == COL_HOR ? '_' : '|', rand() % 4 == 0 ? MAGENTA : rand() % 4 == 0 ? BLUE : GREEN);
+
+    // MOBS AND SHIP
     else if (c == SHLD_OFF_MOB_IC || c == SHLD_ON_MOB_IC)
       render_text_in_color(NULL, c == SHLD_OFF_MOB_IC ? ' ' : '.', rand() % 2 == 0 ? BLUE : MAGENTA);
     else if (c == MOB_LBORD || c == MOB_RBORD || c == MOB_HOR || c == MOB_VER)
       render_text_in_color(NULL, c == MOB_LBORD ? '/' : c == MOB_RBORD ? '\\' : c == MOB_HOR ? '_' : '|', rand() % 2 == 0 ? mob_color1 : mob_color2);
     else if (c == SHP_LBORD || c == SHP_RBORD || c == SHP_HOR || c == SHP_VER)
       render_text_in_color(NULL, c == SHP_LBORD ? '/' : c == SHP_RBORD ? '\\' : c == SHP_HOR ? '_' : '|', rand() % 2 == 0 ? plr_color1 : plr_color2);
+
+    // ITEMS
     else if (c == HEART_IC)
       render_text_in_color(HEART_SMB, '\0', RED);
     else if (c == COIN_IC)
@@ -102,6 +267,10 @@ int render_canvas(char *canv, GAME *game, int time) {
       render_text_in_color(SHLD_SMB, '\0', rand() % 2 == 0 ? GREEN : DARK_GREEN);
     else if (c == ATTR_IC)
       render_text_in_color(ATTR_SYMB, '\0', CYAN);
+    else if (c == RAND_IC)
+      printf("%c", rand() % 2 == 0 ? '.' : rand() % 2 == 0 ? '\'' : ' ');
+
+    // EXPLOSIONS
     else if (canv[i] == EXPL_START || canv[i + 1] == EXPL_START || canv[i - 1] == EXPL_START || canv[i + CANV_W + 1] == EXPL_START || canv[i - CANV_W - 1] == EXPL_START) {
       int r = rand_range(0, 4);
       render_text_in_color(NULL, r == 0 ? '.' : r == 1 ? '/' : r == 2 ? '\\' : '*', rand() % 2 == 0 ? mob_color1 : mob_color2);
@@ -111,6 +280,43 @@ int render_canvas(char *canv, GAME *game, int time) {
     } else if (c == RED_ICON)
       render_text_in_color(NULL, '#', RED);
 
+    // MINI MAP
+    else if (c == MOB_MM_IC)
+      render_text_in_color(NULL, '.', RED);
+    else if (c == PLR_MM_IC)
+      render_text_in_color(NULL, '.', GREEN);
+    else if (c == SHOP_MM_IC)
+      render_text_in_color(NULL, 'S', MAGENTA);
+    else if (c == HOUSE_MM_IC)
+      render_text_in_color(NULL, 'H', BLUE);
+    else if (c == FORT_MM_IC)
+      render_text_in_color(NULL, 'F', RED);
+    else if (c == ARM_MM_IC)
+      render_text_in_color(NULL, 'A', YELLOW);
+
+    // COLORS
+    else if (c == blu_dot || c == red_dot || c == grn_dot || c == yel_dot)
+      render_text_in_color(NULL, '.', c == blu_dot ? BLUE : c == red_dot ? RED : c == grn_dot ? GREEN : YELLOW);
+    else if (c == blu_L_parenth || c == red_L_parenth || c == grn_L_parenth || c == yel_L_parenth)
+      render_text_in_color(NULL, '(', c == blu_L_parenth ? BLUE : c == red_L_parenth ? RED : c == grn_L_parenth ? GREEN : YELLOW);
+    else if (c == blu_R_parenth || c == red_R_parenth || c == grn_R_parenth || c == yel_R_parenth)
+      render_text_in_color(NULL, ')', c == blu_R_parenth ? BLUE : c == red_R_parenth ? RED : c == grn_R_parenth ? GREEN : YELLOW);
+    else if (c == blu_ver_bar || c == red_ver_bar || c == grn_ver_bar || c == yel_ver_bar)
+      render_text_in_color(NULL, '|', c == blu_ver_bar ? BLUE : c == red_ver_bar ? RED : c == grn_ver_bar ? GREEN : YELLOW);
+    else if (c == blu_hor_bar || c == red_hor_bar || c == grn_hor_bar || c == yel_hor_bar)
+      render_text_in_color(NULL, '_', c == blu_hor_bar ? BLUE : c == red_hor_bar ? RED : c == grn_hor_bar ? GREEN : YELLOW);
+    else if (c == blu_dwn_arw || c == red_dwn_arw || c == grn_dwn_arw || c == yel_dwn_arw)
+      render_text_in_color(NULL, 'v', c == blu_dwn_arw ? BLUE : c == red_dwn_arw ? RED : c == grn_dwn_arw ? GREEN : YELLOW);
+    else if (c == blu_up_arw || c == red_up_arw || c == grn_up_arw || c == yel_up_arw)
+      render_text_in_color(NULL, '^', c == blu_up_arw ? BLUE : c == red_up_arw ? RED : c == grn_up_arw ? GREEN : YELLOW);
+    else if (c == blu_lft_arw || c == red_lft_arw || c == grn_lft_arw || c == yel_lft_arw)
+      render_text_in_color(NULL, '<', c == blu_lft_arw ? BLUE : c == red_lft_arw ? RED : c == grn_lft_arw ? GREEN : YELLOW);
+    else if (c == blu_rgt_arw || c == red_rgt_arw || c == grn_rgt_arw || c == yel_rgt_arw)
+      render_text_in_color(NULL, '>', c == blu_rgt_arw ? BLUE : c == red_rgt_arw ? RED : c == grn_rgt_arw ? GREEN : YELLOW);
+    else if (c == red_L_diag_l || c == grn_L_diag_l)
+      render_text_in_color(NULL, '\\', c == red_L_diag_l ? RED : GREEN);
+    else if (c == red_R_diag_r || c == grn_R_diag_r)
+      render_text_in_color(NULL, '/', c == red_R_diag_r ? RED : GREEN);
     else
       printf("%c", c);
     i++;
@@ -126,7 +332,7 @@ int set_lotterie_menu(char *header, char *canv, GAME *game, SHIP *plr) {
   write_on_canv(msg, upg_canv, (UPG_CANV_W - get_width(msg)) / 2, 3);
   free(msg);
   game->lv_choices = rand_range(1, 7);
-  Loot_Type l_choice[game->lv_choices];
+  ITEM_Type l_choice[game->lv_choices];
   int x_range = -1, y_range = 0;
   for (int i = 0; i < game->lv_choices; i++) {
     x_range++;
@@ -134,17 +340,17 @@ int set_lotterie_menu(char *header, char *canv, GAME *game, SHIP *plr) {
       x_range = 0;
       y_range++;
     }
-    Loot_Type new_loot;
+    ITEM_Type new_ITEM;
     do
-      new_loot = rand() % LOOT_TYPE_COUNT;
-    while (contains(l_choice, i, new_loot));
-    l_choice[i] = new_loot;
+      new_ITEM = rand() % ITEM_TYPE_COUNT;
+    while (contains(l_choice, i, new_ITEM));
+    l_choice[i] = new_ITEM;
 
     int cell_x = 20, cell_y = 10;
 
     char *choice_txt = init_blank_canv(cell_x, cell_y, 1, '#');
     char *elem = l_choice[i] == MOR_ATTR   ? ATTR_GFX
-                 : l_choice[i] == MOR_LOOT ? LUCK_GFX
+                 : l_choice[i] == MOR_ITEM ? LUCK_GFX
                  : l_choice[i] == MOR_PRJ  ? GUN_GFX
                  : l_choice[i] == MOR_SHLD ? SHIELD_GFX
                  : l_choice[i] == MOR_HP   ? HEART_GFX
@@ -220,37 +426,44 @@ int write_on_canv(char *src, char *dst, int x_pos, int y_pos) {
   int dst_width = get_width(dst);
   int dst_height = get_height(dst);
 
-  if (x_pos >= dst_width || x_pos + width < 0 || y_pos > dst_height || y_pos + height < 0) return (0);
+  if (x_pos >= dst_width || x_pos + width < 0 || y_pos > dst_height || y_pos + height < 0) return 0;
 
   while (y_pos > 0)
     if (dst[i++] == '\n') y_pos--;
 
-  while (y_pos < 0) {
+  while (y_pos < 0)
     if (src[u++] == '\n') y_pos++;
-  }
 
-  if (x_pos < 0) crop_x(src, abs(x_pos));
+  char *mod_src = strdup(src);
 
-  if (x_pos + width > dst_width - 1) src = set_new_width(src, dst_width - 1 - x_pos);
+  if (x_pos < 0) crop_x(mod_src, abs(x_pos));
+
+  if (x_pos + width > dst_width - 1) mod_src = set_new_width(mod_src, dst_width - 1 - x_pos);
 
   i += x_pos;
 
-  while (src[u]) {
-    if (src[u] && src[u] == '\n') {
+  while (mod_src[u]) {
+    if (mod_src[u] && mod_src[u] == ' ') {
+      i++;
+      u++;
+      continue;
+    }
+    if (mod_src[u] && mod_src[u] == '\n') {
       while (dst[i] && dst[i] != '\n')
         i++;
-      if (!src[u] || !dst[i]) break;
+      if (!mod_src[u] || !dst[i]) break;
       u++;
       i += x_pos + 1;
     }
-    if (!src[u] || !dst[i])
+    if (!mod_src[u] || !dst[i])
       break;
-    else if (src[u] != ' ')
-      dst[i] = src[u];
+    else if (mod_src[u] != ' ')
+      dst[i] = mod_src[u];
     i++;
     u++;
   }
-  return (1);
+  free(mod_src);
+  return 1;
 }
 
 char *get_triangle(char interior, DIR dir, int h, int w, int color) {
@@ -303,9 +516,7 @@ char *get_triangle(char interior, DIR dir, int h, int w, int color) {
   char r_bord = color == 1 ? MOB_RBORD : color == 2 ? SHP_RBORD : '\\';
   char top = color == 1 ? MOB_HOR : color == 2 ? SHP_HOR : '_';
 
-  if (new_try == NULL) {
-    return NULL;
-  }
+  if (new_try == NULL) { return NULL; }
 
   switch (dir) {
     case up:
@@ -341,9 +552,7 @@ char *get_triangle(char interior, DIR dir, int h, int w, int color) {
             new_try[i++] = r_bord;
           } else if (col > start && col < end - 1)
             new_try[i++] = (row == h - 1) ? top : interior;
-          else if (col == end - 1) {
-            new_try[i++] = l_bord;
-          }
+          else if (col == end - 1) { new_try[i++] = l_bord; }
         }
         new_try[i++] = '\n';
       }
@@ -474,24 +683,16 @@ int set_text_red(char *src) {
 
 void render_text_in_color(char *c, char __, char *color) {
   if (color != NULL) {
-    if (c != NULL) {
-      printf("%s%s\033[0m", color, c);
-    }
-    if (__ != '\0') {
-      printf("%s%c\033[0m", color, __);
-    }
+    if (c != NULL) { printf("%s%s\033[0m", color, c); }
+    if (__ != '\0') { printf("%s%c\033[0m", color, __); }
   } else {
-    if (c != NULL) {
-      printf("%s", c);
-    }
-    if (__ != '\0') {
-      printf("%c", __);
-    }
+    if (c != NULL) { printf("%s", c); }
+    if (__ != '\0') { printf("%c", __); }
   }
 }
 
-int is_in_canv(int x_pos, int y_pos, int width, int height, DIR d) {
+int is_in_canv(int x_pos, int y_pos, int width, int height, int canv_x, int canv_y, int canv_w, int canv_h, DIR d) {
   int final_x = x_pos + (d == left || d == up_left || d == down_left ? -1 : d == right || d == up_right || d == down_right ? 1 : 0);
   int final_y = y_pos + (d == up || d == up_left || d == up_right ? -1 : d == down || d == down_right || d == down_left ? 1 : 0);
-  return (final_x >= 2 && final_x + width <= CANV_W - 2 && final_y >= 2 && final_y + height <= CANV_H - 2);
+  return (final_x >= canv_x + 2 && final_x + width <= canv_w + canv_x - 2 && final_y >= canv_y + 2 && final_y + height <= canv_y + canv_h - 2);
 }

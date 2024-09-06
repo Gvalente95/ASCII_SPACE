@@ -1,7 +1,7 @@
 BraceWrapping:
-  AfterControlStatement: true
-  IndentBraces:    false
-BreakBeforeBraces: Attach 
+  AfterControlStatement: false # Prevent braces from being on a new line after control statements
+  IndentBraces: false
+BreakBeforeBraces: Attach
 
 IndentCaseLabels: true
 
@@ -10,4 +10,7 @@ AllowShortCaseLabelsOnASingleLine: false
 
 PenaltyBreakBeforeFirstCallParameter: 1000
 ColumnLimit: 200
-PenaltyExcessCharacter: 1000 
+PenaltyExcessCharacter: 1000
+
+# Additional settings
+AllowShortBlocksOnASingleLine: true # Allow short blocks to be on a single line

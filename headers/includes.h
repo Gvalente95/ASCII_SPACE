@@ -3,8 +3,12 @@
 
 #include "ascii.h"
 #include "define.h"
+#include "dialog.h"
 #include "proto.h"
 
+#include <SDL.h>
+
+#include <ctype.h>
 #include <fcntl.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -15,5 +19,4 @@
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
-
 #endif

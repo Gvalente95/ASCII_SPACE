@@ -2,9 +2,9 @@
 
 BOSS_ACTIONS SET_RAND_STATE(GAME *game, BOSS *boss, int hp_perc);
 
-int upd_boss_fight(char *canv, GAME *game, BOSS *boss, SHIP *mobs, PROJ *mobprj, LOOT *loots, SHIP *plr, int time) {
+int upd_boss_fight(char *canv, GAME *game, BOSS *boss, SHIP *mobs, PROJ *mobprj, ITEM *ITEMs, SHIP *plr, int time) {
   {
-    (void)loots;
+    (void)ITEMs;
     char *boss_content = strdup(boss->content);
     int hp_perc = PERCENTILE(boss->cur_hp, boss->max_HP);
 
@@ -188,7 +188,7 @@ void DEATH(GAME *game, BOSS *boss, PROJ *mobprj) {
   if (boss->time_in_state <= 1) {
     game->mv_type = normal;
     game->allowed_dir = all, game->allowed_lk_dir = all;
-    game->is_in_boss_fight = 0;
+    game->g_st = nm;
     game->boss_mode = 0;
   }
 }
@@ -284,9 +284,7 @@ void ATK2(GAME *game, BOSS *boss, SHIP *plr, PROJ *mobprj, int time, int hp_perc
     boss->x_dir = l_reach ? 1 : r_reach ? -1 : boss->x_dir;
     boss->x_pos += boss->x_dir;
   }
-  if (l_reach || r_reach) {
-    boss->speATK_hole = rand_range(min_hole_start, max_hole_start);
-  }
+  if (l_reach || r_reach) { boss->speATK_hole = rand_range(min_hole_start, max_hole_start); }
 }
 
 void SP_ATTACK(GAME *game, BOSS *boss, SHIP *plr, PROJ *mobprj, int time) {
@@ -397,7 +395,8 @@ void SHIELD(GAME *game, BOSS *boss, SHIP *plr) {
 }
 
 void RETREAT(char *canv, GAME *game, BOSS *boss, SHIP *plr, int time) {
-  game->mv_type = on_grid, game->atk_type = press, game->allowed_dir = hor;
+  game->mv_type = on_grid, game->atk_type = press;
+  game->allowed_dir = all, game->allowed_lk_dir = all;
   // HANDLE_COLISION
   if (abs(boss->x_pos - plr->x_pos) < 10 && abs(boss->y_pos - plr->y_pos) < 10) {
     if (!plr->hurt_timer) {

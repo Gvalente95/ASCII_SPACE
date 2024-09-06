@@ -30,6 +30,13 @@
         "ioctl.h": "c",
         "time.h": "c",
         "stdlib.h": "c",
-        "includes.h": "c"
+        "includes.h": "c",
+        "fcntl.h": "c",
+        "stdarg.h": "c",
+        "__config": "c",
+        "select.h": "c",
+        "*.clang-format": "c",
+        "sstream": "c",
+        "typeinfo": "c"
     }
 }

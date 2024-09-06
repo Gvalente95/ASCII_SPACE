@@ -28,7 +28,26 @@ DIR get_prj_dir(int w_prj, int max_weap, SHIP plr, DIR d) {
   return up;
 }
 
-int contains(Loot_Type *array, int length, Loot_Type value) {
+DIR get_dir_to_target(int target_x, int target_y, int x_pos, int y_pos, int has_diag) {
+  DIR dir;
+  int diff_x = target_x - x_pos + 3;
+  int diff_y = target_y - y_pos + 3;
+  if (abs(diff_x) > abs(diff_y)) {
+    if (diff_y == 0)
+      dir = diff_x > 0 ? right : left;
+    else
+      dir = diff_x > 0 ? has_diag ? (diff_y > 0 ? down_right : up_right) : right : has_diag ? (diff_y > 0 ? down_left : up_left) : left;
+  } else {
+    if (diff_x == 0)
+      dir = diff_y > 0 ? down : up;
+    else
+      dir = diff_y > 0 ? has_diag ? (diff_x > 0 ? down_right : down_left) : down : has_diag ? (diff_x > 0 ? up_right : up_left) : up;
+  }
+  return (dir);
+}
+
+int contains(ITEM_Type *array, int length, ITEM_Type value) {
+  if (array == NULL) return 0;
   for (int i = 0; i < length; i++)
     if (array[i] == value) return 1;
   return 0;
@@ -44,6 +63,10 @@ int check_overlap(BLDING *a, BLDING *b) {
 int is_dir_allowed(DIR dir, DIR allowed_directions) {
   if (allowed_directions == none) return 0;
   if (allowed_directions == all || dir == allowed_directions) return 1;
+  if (allowed_directions == down_left) return (dir == down || dir == left);
+  if (allowed_directions == down_right) return (dir == down || dir == right);
+  if (allowed_directions == up_left) return (dir == up || dir == left);
+  if (allowed_directions == up_right) return (dir == up || dir == right);
   if (allowed_directions == vert) return (dir == up || dir == down);
   if (allowed_directions == hor) return (dir == left || dir == right);
   if (allowed_directions == hor_up) return (dir == left || dir == right || dir == up);
@@ -54,19 +77,21 @@ int is_dir_allowed(DIR dir, DIR allowed_directions) {
 }
 
 int get_width(char *src) {
+  if (src == NULL) return 0;
   int i = 0;
   int cur_x = 0;
-  int max_x = cur_x;
-
+  int max_x = 0;
   while (src[i]) {
     if (src[i] == '\n') {
-      if (max_x < cur_x) max_x = cur_x;
+      if (max_x < cur_x) { max_x = cur_x; }
       cur_x = 0;
+    } else {
+      cur_x++;
     }
-    cur_x++;
     i++;
   }
-  return (max_x);
+  if (cur_x > max_x) { max_x = cur_x; }
+  return max_x;
 }
 
 int get_height(char *src) {
@@ -79,8 +104,17 @@ int get_height(char *src) {
   return (y_size);
 }
 
+char get_at_index(char *canv, int c_width, int c_height, int x, int y) {
+  if (canv == NULL) return '\0';
+  if (c_width == -1) c_width = get_width(canv);
+  if (c_height == -1) c_height = get_height(canv);
+  if ((x < 0 || x > c_width) || (y < 0 || y > c_height)) return ('\0');
+  return (canv[x + ((c_width + 1) * y)]);
+}
+
 int crop_x(char *src, int from_x) {
   int i = 0;
+  if (src == NULL) return 0;
   while (src[i]) {
     int next_end = 0;
     while (src[i] && src[i] != '\n' && next_end < from_x) {
@@ -96,6 +130,7 @@ int crop_x(char *src, int from_x) {
 
 int is_in_string(char c, char *str) {
   int index = 0;
+  if (str == NULL) return 0;
   while (str[index])
     if (str[index++] == c) return 1;
   return 0;
@@ -105,4 +140,109 @@ int is_pos_free(SHIP *mobs, int current_mob, int x, int y) {
   for (int i = 0; i < current_mob; i++)
     if (mobs[i].x_pos == x && mobs[i].y_pos == y) return 1;
   return 0;
+}
+
+int is_pos_free_BUILDINGS(BLDING *bldings, int current_mob, int x, int y) {
+  for (int i = 0; i < current_mob; i++)
+    if ((bldings[i].x_pos >= x - 50 && bldings[i].x_pos <= x + 50) && bldings[i].y_pos >= y - 50 && bldings[i].y_pos <= y + 50) return 1;
+  return 0;
+}
+
+void tile_canvas(char *canv, int width, int tile_size) {
+  int i = 0;
+  if (canv == NULL) return;
+  while (canv[i]) {
+    int row = i / width;
+    int col = i % width;
+    int col_half = col / 2;
+    if (row % tile_size == 0 && col_half % tile_size == 0 && (canv[i] == ' ' || canv[i] == '#')) {
+      canv[i] = '+';
+    } else if (col_half % tile_size == 0 && (canv[i] == ' ' || canv[i] == '#')) {
+      canv[i] = '|';
+    } else if (row % tile_size == 0 && (canv[i] == ' ' || canv[i] == '#')) {
+      canv[i] = '_';
+    }
+    i++;
+  }
+}
+
+void Copy_Item(ITEM *to, ITEM from) {
+  strcpy(to->name, from.name);
+  strcpy(to->desc, from.desc);
+  to->content = from.content;
+  to->dur = from.dur;
+  to->price = from.price, to->rar = from.rar, to->type = from.type;
+  to->val_inc = from.val_inc, to->x_pos = to->y_pos = 0;
+}
+int is_same_item(ITEM a, ITEM b) { return (a.content == b.content && a.name == b.name ? 1 : 0); }
+int Contains_item(ITEM a, ITEM *items, int size) {
+  if (size == 0) return (0);
+  for (int i = 0; i < size; i++) {
+    if (is_same_item(a, items[i])) return (1);
+  }
+  return (0);
+}
+void Generate_items(ITEM *list, NPC *n, int amount, int list_size) {
+  n->items = malloc(sizeof(ITEM) * amount);
+  for (int i = 0; i < amount; i++) {
+    ITEM new_item;
+    do {
+      Copy_Item(&new_item, list[rand_range(0, list_size)]);
+    } while (Contains_item(new_item, n->items, i));
+    Copy_Item(&n->items[i], new_item);
+  }
+}
+
+int color_text(COLOR col, char *text, int fill_with_dots) {
+
+  int i = 0;
+  while (text[i]) {
+    if (text[i] == ' ' && fill_with_dots)
+      text[i] = col == red ? red_dot : col == blue ? blu_dot : col == green ? grn_dot : yel_dot;
+    else {
+      switch (text[i]) {
+        case '(':
+          text[i] = col == red ? red_L_parenth : col == blue ? blu_L_parenth : col == green ? grn_L_parenth : yel_L_parenth;
+          break;
+        case ')':
+          text[i] = col == red ? red_R_parenth : col == blue ? blu_R_parenth : col == green ? grn_R_parenth : yel_R_parenth;
+          break;
+        case '|':
+          text[i] = col == red ? red_ver_bar : col == blue ? blu_ver_bar : col == green ? grn_ver_bar : yel_ver_bar;
+          break;
+        case '_':
+        case '-':
+          text[i] = col == red ? red_hor_bar : col == blue ? blu_hor_bar : col == green ? grn_hor_bar : yel_hor_bar;
+          break;
+        case '.':
+        case ',':
+        case '\'':
+          text[i] = col == red ? red_dot : col == blue ? blu_dot : col == green ? grn_dot : yel_dot;
+          break;
+        case 'v':
+          text[i] = col == red ? red_dwn_arw : col == blue ? blu_dwn_arw : col == green ? grn_dwn_arw : yel_dwn_arw;
+          break;
+        case '^':
+          text[i] = col == red ? red_up_arw : col == blue ? blu_up_arw : col == green ? grn_up_arw : yel_up_arw;
+          break;
+        case '<':
+          text[i] = col == red ? red_lft_arw : col == blue ? blu_lft_arw : col == green ? grn_lft_arw : yel_lft_arw;
+          break;
+        case '>':
+          text[i] = col == red ? red_lft_arw : col == blue ? blu_lft_arw : col == green ? grn_lft_arw : yel_lft_arw;
+          break;
+        case '/':
+          text[i] = col == red ? red_R_diag_r : grn_R_diag_r;
+          break;
+        case '\\':
+          text[i] = col == red ? red_L_diag_l : grn_L_diag_l;
+          break;
+        default:
+          break;
+      }
+    }
+
+    i++;
+  }
+  return 1;
 }
