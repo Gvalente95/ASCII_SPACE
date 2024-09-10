@@ -76,35 +76,33 @@ int is_dir_allowed(DIR dir, DIR allowed_directions) {
   return 0;
 }
 
-int get_width(char *src) {
+int get_width(const char *src) {
   if (src == NULL) return 0;
-  int i = 0;
-  int cur_x = 0;
-  int max_x = 0;
-  while (src[i]) {
-    if (src[i] == '\n') {
-      if (max_x < cur_x) { max_x = cur_x; }
+  int max_x = 0, cur_x = 0;
+
+  while (*src) {
+    if (*src == '\n') {
+      if (cur_x > max_x) max_x = cur_x;
       cur_x = 0;
-    } else {
+    } else
       cur_x++;
-    }
-    i++;
+    src++;
   }
-  if (cur_x > max_x) { max_x = cur_x; }
+  if (cur_x > max_x) max_x = cur_x;
   return max_x;
 }
 
-int get_height(char *src) {
-  int i = 0;
+int get_height(const char *src) {
+  if (src == NULL) return 0;
   int y_size = 0;
-  while (src[i]) {
-    if (src[i] == '\n') y_size++;
-    i++;
+  while (*src) {
+    if (*src == '\n') y_size++;
+    src++;
   }
-  return (y_size);
+  return y_size + 1;
 }
 
-char get_at_index(char *canv, int c_width, int c_height, int x, int y) {
+char get_index_value(char *canv, int c_width, int c_height, int x, int y) {
   if (canv == NULL) return '\0';
   if (c_width == -1) c_width = get_width(canv);
   if (c_height == -1) c_height = get_height(canv);
@@ -112,18 +110,57 @@ char get_at_index(char *canv, int c_width, int c_height, int x, int y) {
   return (canv[x + ((c_width + 1) * y)]);
 }
 
-int crop_x(char *src, int from_x) {
-  int i = 0;
-  if (src == NULL) return 0;
-  while (src[i]) {
-    int next_end = 0;
-    while (src[i] && src[i] != '\n' && next_end < from_x) {
-      src[i++] = ' ';
-      next_end++;
-    }
-    while (src[i] && src[i] != '\n')
-      i++;
-    if (src[i] == '\n') i++;
+int get_index(char *canv, int x_pos, int y_pos) {
+  int width = get_width(canv), height = get_height(canv);
+  if (x_pos > width || y_pos > height) return -1;
+  return (x_pos + (y_pos * (width + 1)));
+}
+
+void reset_item(ITEM *itm) {
+  itm->x_pos = itm->y_pos = itm->center_x = itm->center_y = -1;
+  itm->am = itm->price = itm->dur = 0;
+  itm->type = ITEM_Type_COUNT;
+  for (int x = 0; x < Effect_COUNT; x++)
+    itm->effect[x].name[0] = '\0';
+  for (int x = 0; x < Effect_COUNT; x++)
+    itm->bonus[x].name[0] = '\0';
+  itm->rar = RARITY_COUNT;
+  itm->content = '\0';
+  itm->desc[0] = '\0';
+  itm->name[0] = '\0';
+}
+
+ITEM get_item(RARITY rar, ITEM_Type type, ITEM *items, int buffer_size) {
+  if (rar >= RARITY_COUNT) rar = RARITY_COUNT - 1;
+  int tryes;
+  ITEM itm;
+  do {
+    (Copy_Item(&itm, items[rand_range(0, buffer_size - 1)]));
+    tryes++;
+  } while (itm.rar != rar && tryes <= 400);
+
+  if (tryes >= 400) reset_item(&itm);
+  return itm;
+}
+
+int determineRarity(float luck) {
+  float baseProbabilities[RARITY_COUNT] = {0.6, 0.25, 0.08, 0.04, 0.015, 0.01, 0.005};
+  float probabilities[RARITY_COUNT];
+  float scalingFactor = pow(3, luck * 5);
+
+  for (int i = 0; i < RARITY_COUNT; i++) {
+    probabilities[i] = baseProbabilities[i] * pow(scalingFactor, i);
+  }
+  float sum = 0.0;
+  for (int i = 0; i < RARITY_COUNT; i++)
+    sum += probabilities[i];
+  for (int i = 0; i < RARITY_COUNT; i++)
+    probabilities[i] /= sum;
+  float randomValue = (float)rand() / RAND_MAX;
+  float cumulative = 0.0;
+  for (int i = 0; i < RARITY_COUNT; i++) {
+    cumulative += probabilities[i];
+    if (randomValue <= cumulative) return i;
   }
   return 0;
 }
@@ -172,7 +209,8 @@ void Copy_Item(ITEM *to, ITEM from) {
   to->content = from.content;
   to->dur = from.dur;
   to->price = from.price, to->rar = from.rar, to->type = from.type;
-  to->val_inc = from.val_inc, to->x_pos = to->y_pos = 0;
+  to->x_pos = to->y_pos = -1;
+  to->am = 0;
 }
 int is_same_item(ITEM a, ITEM b) { return (a.content == b.content && a.name == b.name ? 1 : 0); }
 int Contains_item(ITEM a, ITEM *items, int size) {
@@ -189,12 +227,36 @@ void Generate_items(ITEM *list, NPC *n, int amount, int list_size) {
     do {
       Copy_Item(&new_item, list[rand_range(0, list_size)]);
     } while (Contains_item(new_item, n->items, i));
+    new_item.am = 1;
     Copy_Item(&n->items[i], new_item);
   }
 }
 
-int color_text(COLOR col, char *text, int fill_with_dots) {
+void Color_from_index(COLOR col, char **text) {
+  if (!*text) return;
+  char color_char = col == red ? red_st : col == blue ? blu_st : col == green ? grn_st : col == yellow ? yel_st : col == orange ? orng_st : col == purple ? prpl_st : red_st;
+  int original_size = strlen(*text);
+  int new_size = original_size * 2 + 1;
+  char *new_text = malloc(new_size);
+  if (!new_text) return;
 
+  int new_i = 0, prv_i = 0;
+
+  while (prv_i < original_size) {
+    char c = (*text)[prv_i];
+    if (c == '\n' || c == ' ') {
+      new_text[new_i++] = c;
+      prv_i++;
+    } else
+      new_text[new_i++] = color_char, new_text[new_i++] = (*text)[prv_i++];
+  }
+
+  new_text[new_i] = '\0';
+  free(*text);
+  *text = new_text;
+}
+
+int color_text(COLOR col, char *text, int fill_with_dots) {
   int i = 0;
   while (text[i]) {
     if (text[i] == ' ' && fill_with_dots)
@@ -229,7 +291,7 @@ int color_text(COLOR col, char *text, int fill_with_dots) {
           text[i] = col == red ? red_lft_arw : col == blue ? blu_lft_arw : col == green ? grn_lft_arw : yel_lft_arw;
           break;
         case '>':
-          text[i] = col == red ? red_lft_arw : col == blue ? blu_lft_arw : col == green ? grn_lft_arw : yel_lft_arw;
+          text[i] = col == red ? red_rgt_arw : col == blue ? blu_rgt_arw : col == green ? grn_rgt_arw : yel_rgt_arw;
           break;
         case '/':
           text[i] = col == red ? red_R_diag_r : grn_R_diag_r;

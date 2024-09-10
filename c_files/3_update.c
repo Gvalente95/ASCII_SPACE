@@ -1,10 +1,13 @@
 #include "../headers/includes.h"
 
 const char *bld_labs[] = {"SHOP", "ARMORY", "HOUSE", "FORTRESS", "NONE", "BLDING_COUNT"};
+const char *rar_labs[] = {"COMMON", "UNCOMMON", "RARE", "MYSTIC", "ARTIFACT", "DIVINE", "DIABOLICAL", "RARITY_COUNT"};
+
+const char *itm_type_lbs[] = {"MAP", "MATERIAL", "WEAPON", "ARMOR", "EXPANDABLE", "ITEM_TYPE_COUNT"};
 
 int launch_proj(GAME *game, SHIP *plr, PROJ *proj) {
   if (game == NULL || plr == NULL || proj == NULL) return 0;
-  plr->atk_reload = plr->atk_speed;
+  plr->atk_reload = plr->atk_spd;
   if (plr->weap > 0 && game->shots_fired > 0) game->shots_fired--;
   if (game->shots_fired == 0) {
     if (plr->weap > 0) plr->weap--;
@@ -12,10 +15,13 @@ int launch_proj(GAME *game, SHIP *plr, PROJ *proj) {
   }
   int prj_x;
   int prj_y;
+  int x_dist_offs = 2;
+  int y_dist_offs = 1;
+
   DIR dir = get_prj_dir(plr->atk_am, plr->atk_am, *plr, plr->lk_dir);
-  prj_x = (dir == up || dir == down ? plr->x_pos + SHIP_W / 2 : dir == left || dir == up_left ? plr->x_pos - 3 : plr->x_pos + SHIP_W + 3);
-  prj_y = dir == up || dir == up_left || dir == up_right         ? plr->y_pos - 1
-          : dir == down || dir == down_left || dir == down_right ? plr->y_pos + SHIP_H / 2
+  prj_x = (dir == up || dir == down ? plr->x_pos + SHIP_W / 2 : dir == left || dir == up_left ? plr->x_pos - 3 - x_dist_offs : plr->x_pos + SHIP_W + 3 + x_dist_offs);
+  prj_y = dir == up || dir == up_left || dir == up_right         ? plr->y_pos - 1 - y_dist_offs
+          : dir == down || dir == down_left || dir == down_right ? plr->y_pos + SHIP_H / 2 + y_dist_offs
           : dir == left || dir == right                          ? plr->y_pos + 1
                                                                  : plr->y_pos - 1;
   Init_bullet(proj, game->cur_proj, game->mv_type == watch_up ? up : dir, PROJ_BUFFER, prj_x, prj_y);
@@ -26,8 +32,8 @@ int launch_proj(GAME *game, SHIP *plr, PROJ *proj) {
     if (w_prj <= 0 || i + x > PROJ_BUFFER - 1) break;
     if (proj[i + x].x_pos == -1 && proj[i + x].y_pos == -1) continue;
     DIR dir = get_prj_dir(w_prj, plr->atk_am, *plr, plr->lk_dir);
-    prj_x = proj[i].x_pos + (dir == up || dir == down ? 1 : 0);
-    prj_y = proj[i].y_pos + (dir == left || dir == right ? 1 : 0);
+    prj_x = proj->x_pos + (dir == up || dir == down ? 1 : 0);
+    prj_y = proj->y_pos + (dir == left || dir == right ? 1 : 0);
     Init_bullet(proj, game->cur_proj, dir, PROJ_BUFFER, prj_x, prj_y);
     w_prj--;
   }
@@ -67,18 +73,18 @@ int set_input(char *canv, GAME *game, BOSS boss, SHIP *plr, PROJ *proj, PROJ *mo
   if (is_in_string(c, "wasd ") && game->mv_type == cutscene) return (c);
 
   if (c != EOF) {
-    if (!is_in_string(c, "wasdpm12g< \033\t")) plr->dir = none;
+    if (!is_in_string(c, "wasdpm12gh<q \033\t")) plr->dir = none;
     switch (c) {
       case '\t':
         game->cur_proj++;
-        if (game->cur_proj == prj_count) game->cur_proj = 0;
+        if (game->cur_proj == PRJ_TYPES_COUNT) game->cur_proj = 0;
         return ('t');
       case '\033':
         getchar();
         char arrow = getchar();
         DIR lk_dir = arrow == 'A' ? up : arrow == 'B' ? down : arrow == 'C' ? right : left;
         if (is_dir_allowed(lk_dir, game->allowed_lk_dir)) plr->lk_dir = lk_dir;
-        return (arrow == 'A' ? '^' : arrow == 'B' ? 'v' : arrow == 'C' ? '<' : '>');
+        return (arrow == 'A' ? '^' : arrow == 'B' ? '$' : arrow == 'C' ? '<' : '>');
       case ' ':
         if (game->atk_type != disabled && !plr->atk_reload) launch_proj(game, plr, proj);
         return (c);
@@ -113,9 +119,9 @@ int set_input(char *canv, GAME *game, BOSS boss, SHIP *plr, PROJ *proj, PROJ *mo
       case 'g':
         *god_mode = !god_mode;
         if (god_mode)
-          plr->atk_am = 2, plr->atk_pow = 3, plr->atk_speed = 3, plr->hp = 50, plr->weap = 8;
+          plr->atk_am = 2, plr->atk_pow = 3, plr->atk_spd = 3, plr->hp = 50, plr->weap = 8;
         else
-          plr->atk_am = 1, plr->atk_pow = 1, plr->atk_speed = 1, plr->hp = 5, plr->weap = 1;
+          plr->atk_am = 1, plr->atk_pow = 1, plr->atk_spd = 1, plr->hp = 5, plr->weap = 1;
         return (c);
       case 'q':
         exit(0);
@@ -128,33 +134,22 @@ int set_input(char *canv, GAME *game, BOSS boss, SHIP *plr, PROJ *proj, PROJ *mo
   return (c);
 }
 
-void upd_game_state(char *canv, GAME *game, SHIP *plr, BOSS *boss, SHIP *mobs, PROJ *proj, PROJ *mobprj, ITEM *ITEMs, BLDING *buildings, STAR *stars, int has_moved, int time, int *wind) {
-  if (canv == NULL || game == NULL || plr == NULL || boss == NULL || mobs == NULL || proj == NULL || mobprj == NULL || ITEMs == NULL || buildings == NULL || stars == NULL) return;
-  // upd player position
-  if (game->g_st != boss_fight) {
-    if (time % BOSS_SPWNTIME >= BOSS_SPWNTIME - 100 && time % BOSS_SPWNTIME < BOSS_SPWNTIME) {
-      int dng_x = 20, dng_y = 5;
-      game->mv_type = cutscene;
-      game->allowed_dir = up, game->allowed_lk_dir = up, plr->dir = up, plr->lk_dir = up;
-      char *dng_msg = init_blank_canv(dng_x, dng_y, 1, '#');
-      write_on_canv("DANGER !\n BOSS INCOMING", dng_msg, 3, 2);
-      write_on_canv(dng_msg, canv, CANV_X_CENTER - dng_x / 2, CANV_Y_CENTER - dng_y / 2);
-      free(dng_msg);
-    }
-    if (time % BOSS_SPWNTIME == 0) init_boss(game, boss);
-  }
-  upd_player(canv, game, plr, proj, has_moved, time);
-  upd_mob_pos(canv, game, *boss, mobs, mobprj, ITEMs, plr, time, 0);
+void upd_game_state(char *canv, GAME *game, SHIP *plr, BOSS *boss, SHIP *mobs, PROJ *proj, PROJ *mobprj, ITEM *items, BLDING *buildings, STAR *stars, int has_moved, int time, int *wind) {
+  if (canv == NULL || game == NULL || plr == NULL || boss == NULL || mobs == NULL || proj == NULL || mobprj == NULL || items == NULL || buildings == NULL || stars == NULL) return;
 
-  if (game->g_st == boss_fight) upd_boss_fight(canv, game, boss, mobs, mobprj, ITEMs, plr, time);
+  // if (time % circ_add_interval == 0) Init_bullet(proj, game->cur_proj, circular, PROJ_BUFFER, 0, 0);
+  upd_player(canv, game, plr, proj, has_moved, time);
+  upd_mob_pos(canv, game, *boss, mobs, mobprj, items, plr, time, 0);
+
+  upd_boss_fight(canv, game, boss, mobs, mobprj, items, plr, time);
   if (game->cur_blding == NONE) {
     upd_background(canv, stars, *game, *boss, *plr, has_moved, time);
-    upd_ITEMs(canv, game, plr, ITEMs, time, 0);
+    upd_items(canv, game, plr, items, time, 0);
     upd_plr_proj(canv, game, proj, mobs, boss, plr, time, 0);
     upd_mob_prj(canv, game, mobprj, plr, time, 0);
     if (plr->dir != none) upd_wind(canv, wind, game, plr, boss);
   }
-  upd_buildings(canv, buildings, game, plr, time, &has_moved);
+  int r = upd_buildings(canv, buildings, game, plr, time, &has_moved);
 }
 int upd_player(char *canv, GAME *game, SHIP *plr, PROJ *proj, int has_moved, int time) {
   if (plr->atk_reload > 0) plr->atk_reload--;
@@ -191,8 +186,8 @@ int upd_player(char *canv, GAME *game, SHIP *plr, PROJ *proj, int has_moved, int
   }
   // SET GLOB POSITION
   if (game->mv_type != on_grid) {
-    game->gl_x_pos += plr->dir == right ? plr->speed : plr->dir == left ? -plr->speed : 0;
-    game->gl_y_pos += plr->dir == down ? plr->speed : plr->dir == up ? -plr->speed : 0;
+    game->gl_x_pos += plr->dir == right ? plr->spd : plr->dir == left ? -plr->spd : 0;
+    game->gl_y_pos += plr->dir == down ? plr->spd : plr->dir == up ? -plr->spd : 0;
   }
   return (1);
 }
@@ -234,127 +229,153 @@ int upd_background(char *canv, STAR *stars, GAME game, BOSS boss, SHIP plr, int 
   }
   return 1;
 }
-int upd_ITEMs(char *canv, GAME *game, SHIP *plr, ITEM *ITEMs, int time, int reset) {
-  // upd ITEMS
+int upd_items(char *canv, GAME *game, SHIP *plr, ITEM *items, int time, int reset) {
   for (int i = 0; i < ITEM_BUFFER; i++) {
-    if (reset) ITEMs[i].x_pos = ITEMs[i].y_pos = -1;
-    if (ITEMs[i].x_pos == -1 && ITEMs[i].y_pos == -1 || ITEMs[i].content == '\0') continue;
+    ITEM *itm = &items[i];
+    if (reset) itm->x_pos = itm->y_pos = -1;
+    if ((itm->x_pos == -1 && itm->y_pos == -1) || itm->content == '\0') continue;
 
     if (!plr->is_blocked) {
       if (time % (plr->dir == left || plr->dir == right ? 1 : 2) == 0) {
-        ITEMs[i].x_pos += plr->dir == left ? 1 : plr->dir == right ? -1 : 0;
-        ITEMs[i].y_pos += plr->dir == up ? 1 : plr->dir == down ? -1 : 0;
+        itm->center_x += plr->dir == left ? 1 : plr->dir == right ? -1 : 0;
+        itm->center_y += plr->dir == up ? 1 : plr->dir == down ? -1 : 0;
       }
     }
+    double radius = 1;
+    double angular_velocity = 0.1;
+    itm->x_pos = itm->center_x + radius * cos(angular_velocity * time);
+    itm->y_pos = itm->center_y + (radius * 0.5) * sin(angular_velocity * time);
 
-    write_on_canv(&ITEMs[i].content, canv, ITEMs[i].x_pos, ITEMs[i].y_pos);
-    int x_diff = ITEMs[i].x_pos - plr->x_pos;
-    int y_diff = ITEMs[i].y_pos - plr->y_pos;
+    char *itm_cube = malloc(4);
+    itm_cube[0] = '\'';
+    itm_cube[1] = itm->content;
+    itm_cube[2] = '\'';
+    itm_cube[3] = '\0';
+
+    int rar_value = itm->rar;
+    COLOR col = rar_value;
+    Color_from_index(rar_value, &itm_cube);
+    write_on_canv(itm_cube, canv, itm->x_pos, itm->y_pos);
+    free(itm_cube);
+    int x_diff = itm->x_pos - plr->x_pos;
+    int y_diff = itm->y_pos - plr->y_pos;
+
     if (abs(x_diff) < game->attr && abs(y_diff) < game->attr) {
-      int i = 0;
-      while (game->itm_ownd[i].content == '\0')
-        i++;
-      strcpy(game->itm_ownd[i].name, ITEMs[i].name);
-      strcpy(game->itm_ownd[i].desc, ITEMs[i].desc);
-      game->itm_ownd[i].content = ITEMs[i].content;
-      game->itm_ownd[i].dur = ITEMs[i].dur;
-      game->itm_ownd[i].price = ITEMs[i].price;
-      game->itm_ownd[i].rar = ITEMs[i].rar;
-      game->itm_ownd[i].type = ITEMs[i].type;
-      game->itm_ownd[i].val_inc = ITEMs[i].val_inc;
-
-      ITEMs[i].x_pos = ITEMs[i].y_pos = -1;
-      ITEMs[i].content = '\0';
+      if (game->owned_amnt < items_OWNED_BUFFER - 1) {
+        int inv = 0, is_dupl = 0;
+        while (game->itm_ownd[inv].content != '\0' && inv < items_OWNED_BUFFER - 1) {
+          if (game->itm_ownd[inv].content == itm->content) {
+            game->itm_ownd[inv].am++;
+            is_dupl = 1;
+            break;
+          }
+          inv++;
+        }
+        if (!is_dupl) {
+          Copy_Item(&game->itm_ownd[game->owned_amnt], *itm);
+          game->owned_amnt++;
+        }
+        game->inv_incrmnt = inv;
+        game->itm_ownd[inv].center_x += 30;
+        reset_item(itm);
+      }
     }
   }
   return 1;
 }
 
-int upd_mob_pos(char *canv, GAME *game, BOSS boss, SHIP *mobs, PROJ *mobprj, ITEM *ITEMs, SHIP *plr, int time, int reset) {
+int upd_mob_pos(char *canv, GAME *game, BOSS boss, SHIP *mobs, PROJ *mobprj, ITEM *items, SHIP *plr, int time, int reset) {
   (void)canv, (void)boss;
 
   if (game->g_st != boss_fight) {
     for (int i = 0; i < MOBS_BUFFER - 1; i++) {
-      if (reset) mobs[i].hp = 0;
+      SHIP *m = &mobs[i];
+      if (reset) m->hp = 0;
 
-      if (time % BOSS_SPWNTIME >= BOSS_SPWNTIME - 100 && time % BOSS_SPWNTIME <= BOSS_SPWNTIME) mobs[i].hp = 0;
+      if (time % 500 == 0) {
+        m->hp += 10;
+        m->atk_spd--, m->spd--;
+        if (m->spd <= 6) m->spd = 7;
+        if (m->atk_spd <= 0) m->atk_spd = 1;
+      }
+
+      if (time % BOSS_SPWNTIME >= BOSS_SPWNTIME - 100 && time % BOSS_SPWNTIME <= BOSS_SPWNTIME) m->hp = 0;
 
       if (!plr->is_blocked) {
         if (time % (plr->dir == left || plr->dir == right ? 1 : 2) == 0) {
-          mobs[i].x_pos += plr->dir == left ? 1 : plr->dir == right ? -1 : 0;
-          mobs[i].y_pos += plr->dir == up ? 1 : plr->dir == down ? -1 : 0;
+          m->x_pos += plr->dir == left ? 1 : plr->dir == right ? -1 : 0;
+          m->y_pos += plr->dir == up ? 1 : plr->dir == down ? -1 : 0;
         }
       }
-
-      if (mobs[i].hp <= 0 && mobs[i].hurt_timer == 0) { mobs[i].hurt_timer += 10; }
-
-      if (game->cur_blding != NONE && mobs[i].weap > 0) {
-        mobs[i].weap = 0;
-        mobs[i].dir = rand() % 4;
-      }
-
-      if (mobs[i].hurt_timer >= 1) {
-        if (mobs[i].hurt_timer == 1) {
-          if (rand() % 2 == BASE_ITEM_CHNC + game->ITEM_chance) {
-            for (int x = 0; x < ITEM_BUFFER; x++) {
-              if (ITEMs[x].content == '\0') {
-                ITEM itm = game->itm_list[rand_range(0, game->num_items - 1)];
-                ITEMs[x].x_pos = mobs[i].x_pos, ITEMs[x].y_pos = mobs[i].y_pos;
-                ITEMs[x].type = itm.type, ITEMs[x].rar = itm.rar;
-                strcpy(ITEMs[x].desc, itm.desc);
-                strcpy(ITEMs[x].name, itm.name);
-                ITEMs[x].content = itm.content;
-                ITEMs[x].price = itm.price, ITEMs[x].val_inc = itm.val_inc;
-                ITEMs[x].dur = itm.dur;
-
-                break;
-              }
+      // HANDLE DEATH
+      if (m->hp <= 0 && m->death_timer == 0) { m->death_timer += MOB_DEATH_DUR; }
+      if (m->death_timer >= 1) {
+        if (m->death_timer == 1) {
+          int x_offs = 0, y_offs = 0;
+          for (int x = 0; x < ITEM_BUFFER - 1; x++) {
+            int dist_btwn = 10;
+            if (items[x].content == '\0' && items[x].x_pos == -1 && items[x].y_pos == -1) {
+              int itm_rar = determineRarity(game->luck);
+              ITEM new_item;
+              new_item.content = '\0';
+              do
+                (new_item = get_item(itm_rar, rand_range(0, ITEM_Type_COUNT - 1), game->itm_list, game->num_items));
+              while (new_item.content == '\0');
+              Copy_Item(&items[x], new_item);
+              items[x].center_x = m->x_pos + x_offs, items[x].center_y = m->y_pos + y_offs;
+              items[x].x_pos = m->x_pos + y_offs, items[i].y_pos = m->y_pos;
+              x_offs += rand_range(-3, 3), y_offs += rand_range(-3, 3);
+              if (rand_range(0, game->luck) == 0) break;
             }
           }
-          // int new_y = (-SHIP_H - 1) - ((CANV_H / CELL_SIZE) * rand_range(1, 5));
-          // int new_x = C_WIDTH * (rand() % CELL_SIZE) + 2;
 
-          mobs[i].y_pos += rand_range(-2000, 2000);
-          mobs[i].x_pos += rand_range(-2000, 2000);
-          // mobs[i].weap = 0;
-          mobs[i].hp = (MOBS_BUFFER <= MOBS1_BUFFER ? MOBS_1_MAXHP : MOBS_2_MAXHP);
-          mobs[i].hurt_timer = 0;
-          mobs[i].weap = 0;
+          m->y_pos += rand_range(-2000, 2000);
+          m->x_pos += rand_range(-2000, 2000);
+          m->hp = (MOBS_BUFFER <= MOBS1_BUFFER ? MOBS_1_MAXHP : MOBS_2_MAXHP);
+          m->death_timer = 0;
+          m->weap = 0;
         } else {
-          mobs[i].hurt_timer--;
-          mobs[i].weap = 0;
+          m->death_timer--;
+          m->weap = 0;
           game->score += 10;
         }
         continue;
       }
 
+      // HANDLE PLR COLLISION
       if (plr->hurt_timer == 0 && game->cur_blding == NONE) {
-        if (abs(mobs[i].y_pos - plr->y_pos) < 2 && abs(mobs[i].x_pos - plr->x_pos) < 2) {
+        if (abs(m->y_pos - plr->y_pos) < 2 && abs(m->x_pos - plr->x_pos) < 2) {
           if (plr->shield) {
             plr->shield--;
-            mobs[i].hp -= 2;
+            m->hp -= 2;
           } else
             plr->hp--;
           game->plr_col_index = i;
           plr->hurt_timer = HURT_DUR;
         }
       }
-      if (time % mobs[i].speed != 0) continue;
+
+      if (game->cur_blding != NONE && m->weap > 0) {
+        m->weap = 0;
+        m->dir = rand() % 4;
+      }
+
+      if (time % m->spd != 0) continue;
 
       // CHANGE DIR
-      if (mobs[i].weap > 0)
-        mobs[i].dir = get_dir_to_target(plr->x_pos, plr->y_pos, mobs[i].x_pos, mobs[i].y_pos, 1);
+      if (m->weap > 0)
+        m->dir = get_dir_to_target(plr->x_pos, plr->y_pos, m->x_pos, m->y_pos, 1);
       else if (rand() % 50 == 0)
-        mobs[i].dir = rand() % 4;
+        m->dir = rand() % 4;
 
       // ATTACK
-      if (mobs[i].weap && time % mobs[i].atk_speed == 0) {
-        DIR d = mobs[i].dir;
-        Init_bullet(mobprj, base, get_dir_to_target(plr->x_pos, plr->y_pos, mobs[i].x_pos, mobs[i].y_pos, 0), PRJ_MOB_BUFFER, mobs[i].x_pos + SHIP_W / 2, mobs[i].y_pos + SHIP_H / 2);
+      if (m->weap && time % m->atk_spd == 0) {
+        DIR d = m->dir;
+        Init_bullet(mobprj, base, get_dir_to_target(plr->x_pos, plr->y_pos, m->x_pos, m->y_pos, 0), PRJ_MOB_BUFFER, m->x_pos + SHIP_W / 2, m->y_pos + SHIP_H / 2);
       }
-      if (mobs[i].dir != none) {
-        mobs[i].x_pos += mobs[i].dir == left || mobs[i].dir == up_left || mobs[i].dir == down_left ? -2 : mobs[i].dir == up || mobs[i].dir == down ? 0 : 2;
-        mobs[i].y_pos += mobs[i].dir == up || mobs[i].dir == up_left || mobs[i].dir == up_right ? -1 : mobs[i].dir == left || mobs[i].dir == right ? 0 : 1;
+      if (m->dir != none) {
+        m->x_pos += m->dir == left || m->dir == up_left || m->dir == down_left ? -2 : m->dir == up || m->dir == down ? 0 : 2;
+        m->y_pos += m->dir == up || m->dir == up_left || m->dir == up_right ? -1 : m->dir == left || m->dir == right ? 0 : 1;
       }
     }
   }
@@ -362,113 +383,139 @@ int upd_mob_pos(char *canv, GAME *game, BOSS boss, SHIP *mobs, PROJ *mobprj, ITE
 }
 int upd_plr_proj(char *canv, GAME *game, PROJ *proj, SHIP *mobs, BOSS *boss, SHIP *plr, int time, int reset) {
   for (int i = 0; i < PROJ_BUFFER - 1; i++) {
-    if (proj[i].y_pos <= -1 || proj[i].x_pos <= -1 || proj[i].y_pos >= CANV_H || proj[i].x_pos >= CANV_W || reset) {
-      proj[i].x_pos = proj[i].y_pos = -1;
+    PROJ *p = &proj[i];
+    if (p->y_pos <= -1 || p->x_pos <= -1 || p->y_pos >= CANV_H || p->x_pos >= CANV_W || reset || p->dur == 0) {
+      p->x_pos = p->y_pos = -1, p->dur = -1;
       continue;
     }
-    int index = proj[i].x_pos + ((CANV_W + 1) * proj[i].y_pos);
-    if (proj[i].col_timer) {
-      proj[i].col_timer--;
-      if (proj[i].col_timer == 0) {
-        if (proj[i].type == bomb) {
+    if (p->dur > -1) p->dur--;
+    int index = p->x_pos + ((CANV_W + 1) * p->y_pos);
+    if (p->col_timer) {
+      p->col_timer--;
+      if (p->type == bomb) {
+        if (p->dur == -1) {
+          p->col_timer = 0;
+          int radius = 2;
           for (int y = -2; y <= 2; y++) {
-            for (int x = -2; x <= 2; x++) {
-              if (x == 0 && y == 0) continue;
-              int x_p = proj[i].x_pos + x, y_p = proj[i].y_pos + y;
-              PROJ new_proj = Init_bullet(proj, bomb, none, PROJ_BUFFER, x_p, y_p);
-              new_proj.col_timer = 5;
+            for (int x = -4; x <= 4; x++) {
+              if (x == 0 && y == 0 || rand() % 5 == 0) continue;
+              if ((x / 2) * (x / 2) + y * y > radius * radius) continue;
+
+              int x_p = p->x_pos + x, y_p = p->y_pos + y;
+              int new_p = Init_bullet(proj, bomb, none, PROJ_BUFFER, x_p, y_p);
+              proj[new_p].dur = rand_range(20, 50);
             }
           }
+        } else {
+          if (rand() % 20 == 0) p->dur = 0;
+          if (rand() % 50 == 0) {
+            int new_p = Init_bullet(proj, p->type, none, PROJ_BUFFER, p->x_pos + rand_range(-2, 2), p->y_pos + rand_range(-2, 2));
+            proj[new_p].dur = rand_range(5, 20);
+          }
         }
-        proj[i].x_pos = proj[i].y_pos = -1;
+      }
+      if (p->col_timer == 0) {
+        p->x_pos = p->y_pos = -1, p->type = base, p->dir = none, p->dur = -1;
         continue;
       }
       if (time % 5 == 0) {
-        proj[i].x_pos += plr->dir == left ? 1 : plr->dir == right ? -1 : 0;
-        proj[i].y_pos += plr->dir == up ? 1 : plr->dir == down ? -1 : 0;
+        p->x_pos += plr->dir == left ? 1 : plr->dir == right ? -1 : 0;
+        p->y_pos += plr->dir == up ? 1 : plr->dir == down ? -1 : 0;
       }
       canv[index] = PRJ_COL;
       continue;
     }
-    if (canv[index]) {
-      if (canv[index != ' ' && canv[index] != '_']) {
-        if (abs(boss->y_pos - proj[i].y_pos) < boss->height && abs((boss->x_pos + (boss->width / 2)) - proj[i].x_pos) < boss->width / 2) {
-          int dmg = plr->atk_pow + (boss->action == SP_attack2 || boss->action == SP_attack ? 10 : 0);
-          if (boss->shield > 0) {
-            boss->shield -= dmg;
-          } else {
-            boss->cur_hp -= dmg;
-            boss->shield = 0;
-          }
-          game->prj_col_index = -2;
-          proj[i].col_timer = 15;
+    if (canv[index] && canv[index] != '\n') {
+      if (p->type == bomb && canv[index] != ' ') p->col_timer = 15;
+      if (abs(boss->y_pos - p->y_pos) < boss->height && abs((boss->x_pos + (boss->width / 2)) - p->x_pos) < boss->width / 2) {
+        int dmg = plr->atk_pow + (boss->action == SP_attack2 || boss->action == SP_attack ? 10 : 0);
+        if (boss->shield > 0) {
+          boss->shield -= dmg;
         } else {
-          for (int j = 0; j < MOBS_BUFFER; j++) {
-            if (abs(mobs[j].y_pos - proj[i].y_pos) < 5 && abs(mobs[j].x_pos - proj[i].x_pos) < 5) {
-              mobs[j].hp -= plr->atk_pow;
-              mobs[j].weap += 100;
-
-              proj[i].col_timer = 15;
-              break;
+          boss->cur_hp -= dmg;
+          boss->shield = 0;
+        }
+        game->prj_col_index = -2;
+        p->col_timer = 15;
+      } else {
+        for (int j = 0; j < MOBS_BUFFER; j++) {
+          if (mobs[j].hurt_timer || mobs[j].x_pos == -1) continue;
+          if (abs(mobs[j].y_pos - p->y_pos) < 5 && abs(mobs[j].x_pos - p->x_pos) < 5) {
+            if (p->type == ricochet) {
+              p->dur += 10;
+            } else {
+              p->col_timer = 15;
+              if (p->type == bomb) { p->x_pos = mobs[j].x_pos + 2, p->y_pos = mobs[j].y_pos + 2; }
+              p->dir = none;
             }
+
+            mobs[j].hp -= plr->atk_pow;
+            mobs[j].weap += 100;
+            mobs[j].hurt_timer += MOB_HURT_DUR;
+
+            break;
           }
         }
       }
       char ic;
-      PRJ_TYPES t = proj[i].type;
-      switch (proj[i].dir) {
+      PRJ_TYPES t = p->type;
+      switch (p->dir) {
         case up:
         case down:
-          ic = t == base ? PRJ_BS_VER : t == magnet ? PRJ_MAGN_VER : t == bomb ? PRJ_BMB_VER : t == big ? PRJ_BIG_VER : PRJ_BS_VER;
+          ic = t == base ? PRJ_BS_VER : t == magnet ? PRJ_MAGN_VER : t == bomb ? PRJ_BMB_VER : t == big ? PRJ_BIG_VER : t == ricochet ? PRJ_RIC_VER : PRJ_BS_VER;
           break;
         case left:
         case right:
-          ic = t == base ? PRJ_BS_HOR : t == magnet ? PRJ_MAGN_HOR : t == bomb ? PRJ_BMB_HOR : t == big ? PRJ_BIG_HOR : PRJ_BS_HOR;
+          ic = t == base ? PRJ_BS_HOR : t == magnet ? PRJ_MAGN_HOR : t == bomb ? PRJ_BMB_HOR : t == big ? PRJ_BIG_HOR : t == ricochet ? PRJ_RIC_HOR : PRJ_BS_HOR;
           break;
         case up_left:
         case down_right:
-          ic = t == base ? PRJ_BS_DIAG_L : t == magnet ? PRJ_MAGN_DIAG_L : t == bomb ? PRJ_BMB_DIAG_L : t == big ? PRJ_BIG_DIAG_L : PRJ_BS_DIAG_L;
+          ic = t == base ? PRJ_BS_DIAG_L : t == magnet ? PRJ_MAGN_DIAG_L : t == bomb ? PRJ_BMB_DIAG_L : t == big ? PRJ_BIG_DIAG_L : t == ricochet ? PRJ_RIC_DIAG_L : PRJ_BS_DIAG_L;
           break;
         default:
-          ic = t == base ? PRJ_BS_DIAG_R : t == magnet ? PRJ_MAGN_DIAG_R : t == bomb ? PRJ_BMB_DIAG_R : t == big ? PRJ_BIG_DIAG_R : PRJ_BS_DIAG_R;
+          ic = t == base ? PRJ_BS_DIAG_R : t == magnet ? PRJ_MAGN_DIAG_R : t == bomb ? PRJ_BMB_DIAG_R : t == big ? PRJ_BIG_DIAG_R : t == ricochet ? PRJ_RIC_DIAG_R : PRJ_BS_DIAG_R;
           break;
       }
       canv[index] = ic;
+      if (p->prv_index > 0 && p->prv_index < strlen(canv))
+        if (canv[p->prv_index != ' ' && canv[p->prv_index] != '_']) canv[p->prv_index] = ic;
+      p->prv_index = index;
     }
+
     if (game->g_st != boss_fight) {
-      proj[i].x_pos += plr->dir == left ? 1 : plr->dir == right ? -1 : 0;
-      if (time % 2 == 0) proj[i].y_pos += plr->dir == up ? 1 : plr->dir == down ? -1 : 0;
+      p->x_pos += plr->dir == left ? 1 : plr->dir == right ? -1 : 0;
+      if (time % 2 == 0) p->y_pos += plr->dir == up ? 1 : plr->dir == down ? -1 : 0;
     }
-    PRJ_TYPES tp = proj[i].type;
-    int speed = tp == base ? 1 : tp == magnet ? 3 : tp == bomb ? 6 : tp == big ? 1 : 1;
+    PRJ_TYPES tp = p->type;
+    int speed = tp == base ? 1 : tp == magnet ? 1 : tp == bomb ? 6 : tp == big ? 1 : 1;
     if (game->g_st == boss_fight) speed = 1;
 
+    if (p->dir == circular) {
+      double radius = 10;
+      p->x_pos = plr->x_pos + (SHIP_W / 2) + radius * cos(p->angular_velocity * (time + p->angular_offset));
+      p->y_pos = plr->y_pos + (SHIP_H / 2 - 2) + (radius * 0.5) * sin(p->angular_velocity * (time + p->angular_offset));
+    }
     if (time % speed == 0) {
-      if (proj[i].dir != none) {
-        proj[i].x_pos += proj[i].dir == left || proj[i].dir == up_left || proj[i].dir == down_left ? -2 : proj[i].dir == up || proj[i].dir == down ? 0 : 2;
-        proj[i].y_pos += proj[i].dir == up || proj[i].dir == up_left || proj[i].dir == up_right ? -1 : proj[i].dir == left || proj[i].dir == right ? 0 : 1;
+      if (p->dir != none) {
+        p->x_pos += p->dir == left || p->dir == up_left || p->dir == down_left ? -2 : p->dir == up || p->dir == down ? 0 : 2;
+        p->y_pos += p->dir == up || p->dir == up_left || p->dir == up_right ? -1 : p->dir == left || p->dir == right ? 0 : 1;
+      }
+      if (p->type == big && rand() % 20 == 0 && i < (p->dir == circular ? 10 : PROJ_BUFFER - 1)) {
+        int r = rand_range(-2, 2);
+        int new_p = Init_bullet(proj, p->type, p->dir, PROJ_BUFFER, p->x_pos + (r == 0 ? -1 : r), p->y_pos + (r == 0 ? -1 : r));
+        proj[new_p].dur = rand_range(5, 20);
       }
 
-      if (proj[i].type == big && rand() % 5 == 0) {
-        int x_offset = 0;
-        while (x_offset == 0)
-          x_offset = rand_range(-2, 2);
-        int y_offset = 0;
-        while (y_offset == 0)
-          y_offset = rand_range(-2, 2);
-        Init_bullet(proj, proj[i].type, proj[i].dir, PROJ_BUFFER, proj[i].x_pos + x_offset, proj[i].y_pos + y_offset);
-      }
-
-      if (proj[i].type == magnet) {
+      if (p->type == magnet || (p->type == ricochet && p->dur)) {
         if (game->g_st == boss_fight) {
-          proj[i].dir = get_dir_to_target(boss->x_pos, boss->y_pos, proj[i].x_pos, proj[i].y_pos, 1);
+          p->dir = get_dir_to_target(boss->x_pos, boss->y_pos, p->x_pos, p->y_pos, 1);
           return (1);
         } else {
           for (int j = 0; j < MOBS_BUFFER; j++) {
             SHIP m = mobs[j];
             if (m.hurt_timer) continue;
-            if (abs(m.x_pos - proj[i].x_pos + 3) < 30 && abs(m.y_pos - proj[i].y_pos + 3) < 30) {
-              proj[i].dir = get_dir_to_target(m.x_pos, m.y_pos, proj[i].x_pos, proj[i].y_pos, 1);
+            if (abs(m.x_pos - p->x_pos + 3) < 30 && abs(m.y_pos - p->y_pos + 3) < 30) {
+              p->dir = get_dir_to_target(m.x_pos, m.y_pos, p->x_pos, p->y_pos, 1);
               break;
             }
           }
@@ -518,7 +565,6 @@ int upd_mob_prj(char *canv, GAME *game, PROJ *mobprj, SHIP *plr, int time, int r
       }
     }
   }
-
   return 1;
 }
 int upd_wind(char *canv, int *wind, GAME *game, SHIP *shp, BOSS *boss) {
@@ -554,6 +600,8 @@ int upd_wind(char *canv, int *wind, GAME *game, SHIP *shp, BOSS *boss) {
 
 int upd_buildings(char *canv, BLDING *buildings, GAME *game, SHIP *plr, int time, int *has_moved) {
   (void)game;
+  int ret_value = 1;
+
   for (int i = 0; i < BLDING_BUFFER - 1; i++) {
     BLDING *bld = &buildings[i];
     bld->x_pos += plr->dir == left ? 1 : plr->dir == right ? -1 : 0;
@@ -567,12 +615,14 @@ int upd_buildings(char *canv, BLDING *buildings, GAME *game, SHIP *plr, int time
         game->cur_blding = NONE;
         game->is_in_dialog = -1;
         game->atk_type = press;
+        ret_value = 2;
       } else if (plr->y_pos == bld->y_pos + bld->y_size - 2 && game->cur_bld_index == -1) {
         game->cur_bld_index = i;
         game->cur_blding = bld->type;
         game->atk_type = disabled;
         game->cur_floor = 0;
         plr->lk_dir = up;
+        ret_value = 3;
       }
     }
 
@@ -627,16 +677,16 @@ int upd_buildings(char *canv, BLDING *buildings, GAME *game, SHIP *plr, int time
       }
     }
   }
-  return 1;
+  return ret_value;
 }
 
 int upd_collisions(char *canv, GAME *game, PROJ *proj, BOSS *boss, SHIP *mobs, PROJ *mobprj, SHIP *plr) {
 
   int is_blocked = 0, col_dist = 1, x_offs = 0, char_to_look;
-  int up_char = get_at_index(canv, CANV_W, CANV_H, plr->x_pos + x_offs, plr->y_pos - col_dist);
-  int dwn_char = get_at_index(canv, CANV_W, CANV_H, plr->x_pos + x_offs, plr->y_pos + 1 + col_dist);
-  int lft_char = get_at_index(canv, CANV_W, CANV_H, plr->x_pos - col_dist + x_offs - 2, plr->y_pos + col_dist);
-  int rgt_char = get_at_index(canv, CANV_W, CANV_H, plr->x_pos + SHIP_W + col_dist + x_offs + 1, plr->y_pos + col_dist);
+  int up_char = get_index_value(canv, CANV_W, CANV_H, plr->x_pos + x_offs, plr->y_pos - col_dist);
+  int dwn_char = get_index_value(canv, CANV_W, CANV_H, plr->x_pos + x_offs, plr->y_pos + 1 + col_dist);
+  int lft_char = get_index_value(canv, CANV_W, CANV_H, plr->x_pos - col_dist + x_offs - 2, plr->y_pos + col_dist);
+  int rgt_char = get_index_value(canv, CANV_W, CANV_H, plr->x_pos + SHIP_W + col_dist + x_offs + 1, plr->y_pos + col_dist);
 
   int up_blk = (up_char == HOR_WALL || up_char == VRT_WALL || up_char == UPRGT_WALL || up_char == UPLFT_WALL || up_char == DWNLFT_WALL || up_char == DWNRGT_WALL);
   if (up_blk) write_on_canv("^", canv, plr->x_pos, plr->y_pos - col_dist);
@@ -683,19 +733,72 @@ int upd_collisions(char *canv, GAME *game, PROJ *proj, BOSS *boss, SHIP *mobs, P
 }
 
 int handle_seller_menu(char *canv, GAME *game, NPC *seller, BLDING *buildings, SHIP *plr, SHIP *mobs, BOSS *boss, PROJ *mobprj) {
-  int inp = -1;
-  int wind_x = CANV_W - 10, wind_y = CANV_H - 10;
+  int wind_x = 6, wind_y = 3;
+  int wind_width = (CANV_W - (wind_x * 2)), wind_height = CANV_H - (wind_y * 2);
+  int msg_width = wind_width - 20, msg_height = 6;
+  int y_dist = 1, x_dist, inp = -1;
+  int sel = 0;
+  int page = 0;
+  int obj_sel = 0;
 
-  char *window = init_blank_canv(wind_x, wind_y, 1, '#');
-  char **items = (char *)malloc(sizeof(char *));
+  while (inp != 'q') {
+    char *window = init_blank_canv(wind_width, wind_height, 1, '/');
+    char *interior = init_blank_canv(wind_width - 2, wind_height - 2, 1, '#');
+    write_on_canv(interior, window, 1, 1);
 
-  for (int i = 0; i < SHOP_VIEW_ITEMS; i++) {
-    items[i] = init_blank_canv(CANV_W-10, CANV_H-10, 1, '#');
-    set_label(items[i], )
-  }
+    char *buy_SQ = init_blank_canv(5, 3, sel == -1 ? 1 : page == 0 ? 2 : 0, ' '), *sell_SQ = init_blank_canv(6, 3, sel == -2 ? 1 : page == 1 ? 2 : 0, ' ');
+    char *discuss_SQ = init_blank_canv(6, 3, sel == -3 ? 1 : page == 3 ? 2 : 0, ' ');
+    write_on_canv("BUY", buy_SQ, 1, 1), write_on_canv("SELL", sell_SQ, 1, 1), write_on_canv("DISCUSS", discuss_SQ, 1, 1);
+    write_on_canv(buy_SQ, window, 5, 2), write_on_canv(sell_SQ, window, 15, 2), write_on_canv(discuss_SQ, window, 25, 2);
+    free(buy_SQ), free(sell_SQ), free(discuss_SQ);
 
-  while (inp == -1) {
-    inp = getchar();
+    obj_sel = MAX(sel - 4, 0);
+    for (int i = 0; i < 5; i++) {
+      ITEM *itm = page == 0 ? &seller->items[i + obj_sel] : &game->itm_ownd[i + obj_sel];
+      if (itm->content == '\0')
+        continue;
+      else {
+        char *item_bg = init_blank_canv(msg_width, msg_height, i == sel || (i == 4 && sel >= 4) ? 1 : 0, '#');
+        int st_index = get_index(item_bg, 3, 1);
+        char *type_txt = strdup(itm_type_lbs[itm->type]);
+        char *name = strdup(itm->name);
+        char *desc = strdup(itm->desc);
+        Color_from_index((int)itm->rar, &name);
+        set_label(item_bg, &st_index, "x", itm->am + 1);
+        set_label(item_bg, &st_index, name, '\0');
+        st_index = get_index(item_bg, 3, 2);
+        set_label(item_bg, &st_index, type_txt, '\0');
+        st_index = get_index(item_bg, 3, 3);
+        set_label(item_bg, &st_index, desc, '\0');
+        st_index = get_index(item_bg, 3, 4);
+        set_label(item_bg, &st_index, "$", page == 0 ? itm->price : itm->price / 2);
+        write_on_canv(item_bg, window, 3, msg_height + (i * (y_dist + msg_height)));
+        free(item_bg), free(type_txt), free(name), free(desc);
+      }
+    }
+    system("clear");
+    char *text = strdup(slr_dlgs[rand_range(0, 12)]);
+    char *bub = get_text_bubble(text);
+    write_on_canv(bub, window, wind_width - 10 - (get_width(bub) + 5), wind_height - 10);
+    write_on_canv(seller_idle_down1, window, wind_width - 10, wind_height - 10);
+    free(bub), free(text);
+
+    write_on_canv(window, canv, wind_x, wind_y);
+    render_canvas(canv, game, 0);
+    inp = -1;
+    while (inp == -1) {
+      inp = getchar();
+      sel += inp == 's' ? 1 : inp == 'w' ? -1 : 0;
+      if (sel <= -1) sel += inp == 'd' ? -1 : inp == 'a' ? 1 : 0;
+      if (sel < -3) sel = -3;
+      if (inp == ' ') {
+        if (sel == -1) page = 0;
+        if (sel == -2) page = 1;
+        if (sel == -3) page = 2;
+      }
+      usleep(50000);
+    }
+    free(window), free(interior);
   }
   return 1;
 }

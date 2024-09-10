@@ -16,6 +16,8 @@ TARGET = a.out
 # Compiler flags
 CFLAGS = -I$(SDL2_FRAMEWORK_PATH)/Headers
 
+DEBUG = -fsanitize=address -g
+
 # Linker flags
 LDFLAGS = -F$(FRAMEWORK_PATH) -framework SDL2 \
           -Wl,-rpath,$(FRAMEWORK_PATH)
@@ -24,6 +26,11 @@ LDFLAGS = -F$(FRAMEWORK_PATH) -framework SDL2 \
 $(TARGET): $(SRCS)
 	$(CC) $(SRCS) $(CFLAGS) $(LDFLAGS) -o $(TARGET)
 
+debug:
+	$(CC) $(SRCS) $(CFLAGS) $(DEBUG) $(LDFLAGS) -o $(TARGET)
+
 # Clean rule
 clean:
 	rm -f $(TARGET)
+
+re: clean $(TARGET)

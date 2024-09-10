@@ -2,26 +2,33 @@
 
 const char *BLDING_LABELS[] = {"SHOP", "ARMORY", "HOUSE", "FORTRESS", "NONE", "BLDING_COUNT"};
 
-void initialize_game(GAME *game, SHIP *plr, ITEM *ITEMs, SHIP *mobs, PROJ *proj, PROJ *mobprj, STAR *stars, BLDING *buildings) {
+void initialize_game(GAME *game, SHIP *plr, ITEM *items, SHIP *mobs, PROJ *proj, PROJ *mobprj, STAR *stars, BLDING *buildings) {
   set_nonblocking_mode(1);
 
-  game->ITEM_chance = STRT_ITEM_CHNC;
+  game->luck = 0;
   game->level = game->score = game->max_score = game->prj_qual = 0;
   game->lv_choices = 3, game->attr = 2;
   game->gl_x_pos = 0, game->gl_y_pos = 0, game->prj_col_index = -1, game->plr_col_index = -1, game->is_framing = 0;
   game->boss_mode = 0, game->g_st = nm;
   game->mv_type = normal, game->atk_type = press, game->allowed_dir = all, game->allowed_lk_dir = all;
   game->cur_proj = base, game->cur_blding = NONE, game->cur_bld_index = -1;
-  game->is_in_dialog = -1, game->cur_floor = -1;
+  game->is_in_dialog = -1, game->cur_floor = -1, game->owned_amnt = 0, game->inv_incrmnt = 0;
   game->minimap = NULL, game->cur_seller = NULL;
 
   plr->x_pos = PLR_CENTER_X + 5;
   plr->y_pos = PLR_CENTER_Y;
-  plr->hp = PLR_MAX_HP;
-  plr->hurt_timer = plr->shield = plr->weap = 0, plr->atk_pow = 1, plr->atk_speed = 10, plr->atk_am = 1, plr->is_blocked = 0;
-  plr->speed = 1;
+  plr->maxHP = PLR_MAX_HP, plr->hp = plr->maxHP;
+  plr->hurt_timer = plr->shield = plr->weap = 0, plr->atk_pow = 1, plr->atk_spd = 5, plr->atk_am = 1, plr->is_blocked = 0;
+  plr->maxSpd = 1, plr->spd = plr->maxSpd;
   plr->atk_reload = 1;
   plr->dir = up, plr->lk_dir = up;
+
+  for (int i = 0; i < items_OWNED_BUFFER; i++) {
+    reset_item(&game->itm_ownd[i]);
+  }
+
+  for (int i = 0; i < ITEM_BUFFER; i++)
+    reset_item(&items[i]);
 
   for (int i = 0; i < MOBS_BUFFER; i++) {
     int is_2 = i > MOBS1_BUFFER;
@@ -31,17 +38,20 @@ void initialize_game(GAME *game, SHIP *plr, ITEM *ITEMs, SHIP *mobs, PROJ *proj,
       y = rand_range(-500, 500);
     } while (is_pos_free(mobs, i, x, y));
     mobs[i].x_pos = x, mobs[i].y_pos = y, mobs[i].is_blocked = 0;
-    mobs[i].shield = mobs[i].weap = mobs[i].hurt_timer = 0, mobs[i].hp = is_2 ? MOBS_2_MAXHP : MOBS_1_MAXHP, mobs[i].speed = is_2 ? MOBS_2_SPD : MOBS_1_SPD;
+    mobs[i].shield = mobs[i].weap = mobs[i].hurt_timer = mobs[i].death_timer = 0;
+    mobs[i].maxHP = is_2 ? MOBS_2_MAXHP : MOBS_1_MAXHP, mobs[i].hp = mobs[i].maxHP;
+    mobs[i].maxSpd = is_2 ? MOBS_2_SPD : MOBS_1_SPD, mobs[i].spd = mobs[i].maxSpd;
     mobs[i].dir = rand_range(0, 3);
-    mobs[i].atk_speed = is_2 ? 50 : 25;
+    mobs[i].atk_spd = is_2 ? 50 : 25;
   }
 
   for (int i = 0; i < PROJ_BUFFER; i++) {
-    proj[i].x_pos = proj[i].y_pos = -1, proj[i].col_timer = 0;
+    proj[i].prv_index = proj[i].x_pos = proj[i].y_pos = -1, proj[i].col_timer = 0, proj[i].angular_velocity = .1f, proj[i].angular_offset = rand_range(1, 50);
+    proj[i].dur = -1;
   }
 
   for (int i = 0; i < PRJ_MOB_BUFFER; i++)
-    mobprj[i].x_pos = mobprj[i].y_pos = -1;
+    mobprj[i].x_pos = mobprj[i].y_pos = -1, mobprj[i].col_timer = 0, mobprj[i].dur = -1;
 
   for (int i = 0; i < STAR_BUFFER - 1; i++) {
     stars[i].x_pos = rand_range(1, CANV_W - 1);
@@ -59,54 +69,29 @@ void initialize_game(GAME *game, SHIP *plr, ITEM *ITEMs, SHIP *mobs, PROJ *proj,
 
 void init_new_buildings(GAME *game, BLD_TYPE type, BLDING *bld, int x, int y) {
   int strt_ind = 0;
-  bld->x_pos = x;
-  bld->y_pos = y;
+  int y_s = (type == HOUSE) ? rand_range(25, 35) : (type == SHOP) ? 33 : (type == FORTRESS) ? 55 : rand_range(30, 40), x_s = y_s * 2;
+  int y_s_ext = y_s / 2, x_s_ext = y_s_ext * 2;
+  bld->y_size = y_s, bld->x_size = x_s;
+  bld->x_pos = x, bld->y_pos = y;
   bld->type = type;
   bld->floors = (char **)malloc(sizeof(char *) * 10);
-
-  int y_s = (type == HOUSE) ? rand_range(25, 35) : (type == SHOP) ? 33 : (type == FORTRESS) ? 55 : rand_range(30, 40);
-  int x_s = y_s * 2;
-  bld->y_size = y_s, bld->x_size = x_s;
-
-  int y_s_ext = y_s / 2;
-  int x_s_ext = y_s_ext * 2;
   bld->y_s_ext = y_s_ext, bld->x_s_ext = x_s_ext;
 
-  bld->npc_am = rand_range(2, 5);
-  bld->npcs = malloc(sizeof(NPC) * bld->npc_am);
+  bld->npc_am = rand_range(2, 5), bld->npcs = malloc(sizeof(NPC) * bld->npc_am);
 
   char *txt = strdup(BLDING_LABELS[type]);
-
   int tx_len = strlen(txt);
   int ens_len = tx_len + 4;
   char *enseigne = init_blank_canv(ens_len, 4, 2, '#');
   color_text(type == HOUSE ? blue : type == SHOP ? green : type == FORTRESS ? red : yellow, enseigne, 0);
-
   write_on_canv(txt, enseigne, 2, 2);
   free(txt);
 
+  // SET FLOORS
+  char *stairdown, *stairup;
   int rs = rand_range(0, 6);
   int floors_am = bld->type == HOUSE ? rand_range(0, 4) : bld->type == FORTRESS ? rand_range(0, 7) : 0;
   bld->flr_am = floors_am;
-
-  bld->ext_cont = init_blank_canv(x_s, y_s, 0, ' ');
-  char *ext_in = init_blank_canv(x_s_ext, y_s_ext, 2, '_');
-  char *ext_roof = init_blank_canv(x_s_ext - 4, y_s_ext - 2, 2, '.');
-  write_on_canv(ext_roof, ext_in, 2, 0);
-  int u = 0;
-  while (enseigne[u]) {
-    if (enseigne[u] == ' ' || enseigne[u] == '#') enseigne[u] = rand() % 2 == 0 ? WIND_ALL_DOT : rand() % 3 == 0 ? WIND_ALL_HOR : WIND_ALL_VER;
-    u++;
-  }
-  u = 0;
-
-  write_on_canv(enseigne, ext_in, (x_s_ext / 2) - ens_len / 2, y_s_ext - 8);
-  write_on_canv(ext_in, bld->ext_cont, x_s / 2 - x_s_ext / 2, y_s - y_s_ext);
-
-  free(enseigne);
-
-  // SET FLOORS
-  char *stairdown, *stairup;
   int i = 0;
   while (i < 10) {
     if (i > floors_am)
@@ -151,8 +136,19 @@ void init_new_buildings(GAME *game, BLD_TYPE type, BLDING *bld, int x, int y) {
 
     i++;
   }
-
+  // SET SHOP
   if (bld->type == SHOP || bld->type == ARMORY) {
+    char *ship = strdup(ship_full);
+    bld->ext_cont = init_blank_canv(get_width(ship), y_s, 0, ' ');
+    write_on_canv(ship, bld->ext_cont, 0, y_s - get_height(ship) - 1);
+    x_s_ext = get_width(bld->ext_cont), y_s_ext = get_height(bld->ext_cont);
+    bld->x_s_ext = x_s_ext, bld->y_s_ext = y_s_ext;
+    int u = 0;
+    while (enseigne[u]) {
+      if (enseigne[u] == ' ' || enseigne[u] == '#') enseigne[u] = rand() % 2 == 0 ? WIND_ALL_DOT : rand() % 3 == 0 ? WIND_ALL_HOR : WIND_ALL_VER;
+      u++;
+    }
+    write_on_canv(enseigne, bld->ext_cont, (x_s_ext / 2) - ens_len / 2, y_s_ext - 12);
 
     char *comptoir = init_blank_canv(get_width(bld->floors[0]), 3, 2, '#');
     int x_add, y_add = -8;
@@ -161,7 +157,7 @@ void init_new_buildings(GAME *game, BLD_TYPE type, BLDING *bld, int x, int y) {
       if (i == 3) y_add = 0;
       int x_add = i > 2 ? x_s - 30 : 0;
       char *vitrine = init_blank_canv(10, 10, 0, ' ');
-      char *box = init_blank_canv(10, 3, 2, '#');
+      char *box = init_blank_canv(9, 3, 2, '#');
 
       char *item = strdup(rs == 0 ? LUCK_GFX_SMALL : rs == 1 ? SCOR_GFX_SMALL : rs == 2 ? SHIELD_GFX_SMALL : rs == 3 ? GUN_GFX_SMALL : rs == 4 ? ATTR_GFX_SMALL : HEART_GFX_SMALL);
       rs++;
@@ -179,7 +175,7 @@ void init_new_buildings(GAME *game, BLD_TYPE type, BLDING *bld, int x, int y) {
 
     n->type = SELLER;
     n->floor = 0;
-    n->text = strdup(bld->type == SHOP ? slr_dlgs[rand_range(0, 14)] : forg_dlgs[rand_range(0, 13)]);
+    n->text = strdup(bld->type == SHOP ? slr_dlgs[rand_range(0, 13)] : forg_dlgs[rand_range(0, 12)]);
     n->x_p = (x_s / 2) - 5, n->y_p = 5;
     n->dwn_bdy = strdup(seller_idle_down1), n->up_bdy = strdup(seller_idle_up);
     n->lft_bdy = strdup(seller_idle_left), n->rgt_bdy = strdup(seller_idle_right);
@@ -187,38 +183,36 @@ void init_new_buildings(GAME *game, BLD_TYPE type, BLDING *bld, int x, int y) {
 
     n->items = malloc(sizeof(ITEM) * SHOP_INVENTORY);
     system("clear");
-
     Generate_items(game->itm_list, n, SHOP_INVENTORY, game->num_items);
+  } else {
+    bld->ext_cont = init_blank_canv(x_s, y_s, 0, ' ');
+    char *ext_in = init_blank_canv(x_s_ext, y_s_ext, 2, '_');
+    char *ext_roof = init_blank_canv(x_s_ext - 4, y_s_ext - 2, 2, '.');
+    write_on_canv(ext_roof, ext_in, 2, 0);
+    write_on_canv(enseigne, ext_in, (x_s_ext / 2) - ens_len / 2, y_s_ext - 8);
+    write_on_canv(ext_in, bld->ext_cont, x_s / 2 - x_s_ext / 2, y_s - y_s_ext);
   }
+  free(enseigne);
 
   // ENTRANCE
-  int size = 6;
-  int height = 3;
+  int size = 6, height = 3;
   int x_cent = x_s / 2;
   int cur_y = ((x_s + 1) * (y_s));
   int int_i = x_cent + cur_y + x;
-
-  int trail_size = 3;
-
-  int x_min = x_s / 2 - x_s_ext / 2 + 1, x_max = x_s / 2 - x_s_ext / 2 + x_s_ext - 1;
-  int y_min = y_s - y_s_ext - trail_size, y_max = y_s - y_s_ext;
-
-  int y_am = trail_size;
-
   for (int y = 0; y < height; y++) {
     cur_y -= ((x_s + 1));
     for (int x = -size; x < size; x++) {
       int_i = x_cent + cur_y + x;
       if (int_i >= 0) {
         bld->floors[0][int_i] = (y <= 0 && (x == -size || x == size - 1)) ? '|' : '#';
-        bld->ext_cont[int_i] = y == height - 1 ? '-' : x == -size || x == size - 1 ? '|' : '#';
+        if (bld->type != SHOP && bld->type != ARMORY) bld->ext_cont[int_i] = y == height - 1 ? '-' : x == -size || x == size - 1 ? '|' : '#';
       }
     }
   }
 
   for (int i = strt_ind; i < bld->npc_am; i++) {
     bld->npcs[i].type = rand_range(1, 3);
-    bld->npcs[i].text = strdup(forg_dlgs[rand_range(0, 13)]);
+    bld->npcs[i].text = strdup(forg_dlgs[rand_range(0, 12)]);
     bld->npcs[i].x_p = rand_range(5, bld->x_size - 5), bld->npcs[i].y_p = rand_range(5, bld->y_size - 5);
     bld->npcs[i].dwn_bdy = strdup(plr_idle_down1), bld->npcs[i].up_bdy = strdup(plr_idle_up), bld->npcs[i].lft_bdy = strdup(plr_idle_left), bld->npcs[i].rgt_bdy = strdup(plr_idle_right);
     bld->npcs[i].dir = rand_range(0, 4);
@@ -232,17 +226,19 @@ char *init_blank_canv(int w, int h, int has_ext, char interior) {
   for (int y = 0; y < h; y++) {
     for (int x = 0; x < w; x++) {
       if (x == 0 && y == 0)
-        canv[i++] = has_ext == 2 ? UPLFT_WALL : ' ';
+        canv[i++] = has_ext == 3 ? '.' : has_ext == 2 ? UPLFT_WALL : ' ';
       else if (x == 0 && y == h - 1)
-        canv[i++] = has_ext == 2 ? DWNLFT_WALL : ' ';
+        canv[i++] = has_ext == 3 ? '.' : has_ext == 2 ? DWNLFT_WALL : ' ';
       else if (x == w - 1 && y == 0)
-        canv[i++] = has_ext == 2 ? UPRGT_WALL : ' ';
+        canv[i++] = has_ext == 3 ? '.' : has_ext == 2 ? UPRGT_WALL : ' ';
       else if (x == w - 1 && y == h - 1)
-        canv[i++] = has_ext == 2 ? DWNRGT_WALL : ' ';
+        canv[i++] = has_ext == 3 ? '.' : has_ext == 2 ? DWNRGT_WALL : ' ';
       else if (x == 0 || x == w - 1)
-        canv[i++] = !has_ext ? ' ' : has_ext == 2 ? VRT_WALL : has_ext == 1 ? CANV_VER : COL_VER;
-      else if (y == 0 || y == h - 1)
-        canv[i++] = !has_ext ? ' ' : has_ext == 2 ? HOR_WALL : has_ext == 1 ? CANV_HOR : COL_HOR;
+        canv[i++] = !has_ext ? ' ' : has_ext == 3 ? '|' : has_ext == 2 ? VRT_WALL : has_ext == 1 ? CANV_VER : COL_VER;
+      else if (y == 0)
+        canv[i++] = !has_ext ? ' ' : has_ext == 3 ? '_' : has_ext == 2 ? HOR_WALL : has_ext == 1 ? CANV_HOR : COL_HOR;
+      else if (y == h - 1)
+        canv[i++] = !has_ext ? ' ' : has_ext == 3 ? '-' : has_ext == 2 ? HOR_WALL : has_ext == 1 ? CANV_HOR : COL_HOR;
       else
         canv[i++] = interior;
     }
@@ -252,13 +248,13 @@ char *init_blank_canv(int w, int h, int has_ext, char interior) {
   return (canv);
 }
 
-PROJ Init_bullet(PROJ *prj, PRJ_TYPES type, DIR dir, int BUFFER_SIZE, int x_pos, int y_pos) {
+int Init_bullet(PROJ *prj, PRJ_TYPES type, DIR dir, int BUFFER_SIZE, int x_pos, int y_pos) {
   for (int i = 0; i < BUFFER_SIZE; i++) {
-    if (prj[i].col_timer || prj[i].x_pos != -1 || prj[i].y_pos != -1) continue;
+    if (prj[i].col_timer || (prj[i].x_pos > -1 && prj[i].y_pos > -1)) continue;
     prj[i].x_pos = x_pos, prj[i].y_pos = y_pos, prj[i].dir = dir, prj[i].type = type;
-    return prj[i];
+    return i;
   }
-  return prj[PROJ_BUFFER - 1];
+  return -1;
 }
 
 void init_boss(GAME *game, BOSS *boss) {

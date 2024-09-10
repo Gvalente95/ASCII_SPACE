@@ -1,0 +1,27 @@
+implement:
+
+parser for weapons types
+parser for armor types
+
+
+
+ITEMS struct
+name 
+show_arrays_content
+accessx_descriptor
+rarity_val 
+PRIO_PROCESS 
+val_inc 
+HURT_DUR type
+
+typedef struct {
+      char name[50];
+  int value, dur;
+  Target_Type target;
+} BONUS;
+
+typedef struct {
+      char name[50];
+  int value, dur;
+  Target_Type target;
+} EFFECT;

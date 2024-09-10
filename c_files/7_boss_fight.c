@@ -2,55 +2,68 @@
 
 BOSS_ACTIONS SET_RAND_STATE(GAME *game, BOSS *boss, int hp_perc);
 
-int upd_boss_fight(char *canv, GAME *game, BOSS *boss, SHIP *mobs, PROJ *mobprj, ITEM *ITEMs, SHIP *plr, int time) {
-  {
-    (void)ITEMs;
-    char *boss_content = strdup(boss->content);
-    int hp_perc = PERCENTILE(boss->cur_hp, boss->max_HP);
+int upd_boss_fight(char *canv, GAME *game, BOSS *boss, SHIP *mobs, PROJ *mobprj, ITEM *items, SHIP *plr, int time) {
+  (void)items;
 
-    HANDLE_CONSTANTS(game, boss, plr, mobprj, time, hp_perc);
-
-    //  CHANGE OF ACTION
-    if (boss->time_in_state <= 0) CHANGE_ACTION(game, boss, plr, hp_perc);
-    if (boss->action == die)
-      DEATH(game, boss, mobprj);
-    else if (boss->action == entrance)
-      ENTRANCE(game, boss, plr, time);
-    else if (boss->action == reposition)
-      REPOSITION(game, boss, plr, time);
-    else if (boss->action == SP_attack)
-      SP_ATTACK(game, boss, plr, mobprj, time);
-    else if (boss->action == SP_attack2)
-      SP_ATK2(game, boss, plr, time);
-    else if (boss->action == attack0)
-      ATK0(game, boss, plr, mobprj, time);
-    else if (boss->action == attack)
-      ATK1(game, boss, plr, mobprj, time, hp_perc);
-    else if (boss->action == attack2)
-      ATK2(game, boss, plr, mobprj, time, hp_perc);
-    else if (boss->action == call)
-      CALL(game, boss, plr, mobs, time);
-    else if (boss->action == idle)
-      IDLE(game, boss, plr, time);
-    else if (boss->action == hurt)
-      HURT(game, boss, plr, time);
-    else if (boss->action == shield)
-      SHIELD(game, boss, plr);
-    else if (boss->action == retreat)
-      plr->dir = none, RETREAT(canv, game, boss, plr, time);
-
-    boss->time_in_state--;
-    int has_losthp = HANDLE_HEALTH(boss, hp_perc);
-    boss_content = strdup(boss->content);
-    if (has_losthp) set_text_red(boss_content);
-
-    int show_boss = 1;
-    if (boss->prv_shield != boss->shield) {
-      if (boss->prv_shield > boss->shield) show_boss = 0;
-      boss->prv_shield = boss->shield;
+  if (game->g_st != boss_fight) {
+    if (time % BOSS_SPWNTIME >= BOSS_SPWNTIME - 100 && time % BOSS_SPWNTIME < BOSS_SPWNTIME) {
+      int dng_x = 20, dng_y = 5;
+      game->mv_type = cutscene;
+      game->allowed_dir = up, game->allowed_lk_dir = up, plr->dir = up, plr->lk_dir = up;
+      char *dng_msg = init_blank_canv(dng_x, dng_y, 1, '#');
+      write_on_canv("DANGER !\n BOSS INCOMING", dng_msg, 3, 2);
+      write_on_canv(dng_msg, canv, CANV_X_CENTER - dng_x / 2, CANV_Y_CENTER - dng_y / 2);
+      free(dng_msg);
     }
-    if (boss_content != NULL && show_boss) RENDER_BOSS(boss, boss_content, canv);
+    if (time % BOSS_SPWNTIME == 0) init_boss(game, boss);
+    return 0;
   }
+
+  char *boss_content = strdup(boss->content);
+  int hp_perc = PERCENTILE(boss->cur_hp, boss->max_HP);
+
+  HANDLE_CONSTANTS(game, boss, plr, mobprj, time, hp_perc);
+
+  //  CHANGE OF ACTION
+  if (boss->time_in_state <= 0) CHANGE_ACTION(game, boss, plr, hp_perc);
+  if (boss->action == die)
+    DEATH(game, boss, mobprj);
+  else if (boss->action == entrance)
+    ENTRANCE(game, boss, plr, time);
+  else if (boss->action == reposition)
+    REPOSITION(game, boss, plr, time);
+  else if (boss->action == SP_attack)
+    SP_ATTACK(game, boss, plr, mobprj, time);
+  else if (boss->action == SP_attack2)
+    SP_ATK2(game, boss, plr, time);
+  else if (boss->action == attack0)
+    ATK0(game, boss, plr, mobprj, time);
+  else if (boss->action == attack)
+    ATK1(game, boss, plr, mobprj, time, hp_perc);
+  else if (boss->action == attack2)
+    ATK2(game, boss, plr, mobprj, time, hp_perc);
+  else if (boss->action == call)
+    CALL(game, boss, plr, mobs, time);
+  else if (boss->action == idle)
+    IDLE(game, boss, plr, time);
+  else if (boss->action == hurt)
+    HURT(game, boss, plr, time);
+  else if (boss->action == shield)
+    SHIELD(game, boss, plr);
+  else if (boss->action == retreat)
+    plr->dir = none, RETREAT(canv, game, boss, plr, time);
+
+  boss->time_in_state--;
+  int has_losthp = HANDLE_HEALTH(boss, hp_perc);
+  boss_content = strdup(boss->content);
+  if (has_losthp) set_text_red(boss_content);
+
+  int show_boss = 1;
+  if (boss->prv_shield != boss->shield) {
+    if (boss->prv_shield > boss->shield) show_boss = 0;
+    boss->prv_shield = boss->shield;
+  }
+  if (boss_content != NULL && show_boss) RENDER_BOSS(boss, boss_content, canv);
   return 1;
 }
 
@@ -368,7 +381,7 @@ void CALL(GAME *game, BOSS *boss, SHIP *plr, SHIP *mobs, int time) {
   for (int i = 0; i < MOBS_BUFFER; i++) {
     if (mobs[i].x_pos != -1 && mobs[i].y_pos != -1) continue;
     mobs[i].x_pos = CANV_X_CENTER - SHIP_W / 2, mobs[i].y_pos = boss->y_pos + boss->height + 1;
-    mobs[i].speed = 1, mobs[i].dir = down;
+    mobs[i].spd = 1, mobs[i].dir = down;
     break;
   }
 }

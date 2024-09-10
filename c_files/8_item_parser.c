@@ -1,43 +1,36 @@
 #include "../headers/includes.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 ITEM parse_item(char *line, int cur_line) {
   ITEM item;
   int rarity_val, type_val;
 
-  switch (cur_line) {
-    case 0:
-      sscanf(line, "%[^\n]", item.name);
-      break;
-    case 1:
-      sscanf(line, "%c", &item.content);
-      break;
-    case 2:
-      sscanf(line, "%[^\n]", item.desc);
-      break;
-    case 3:
-      sscanf(line, "%d", &item.rar);
-      break;
-    case 4:
-      sscanf(line, "%d", &item.price);
-      break;
-    case 5:
-      sscanf(line, "%d", &item.val_inc);
-      break;
-    case 6:
-      sscanf(line, "%d", &item.dur);
-      break;
-    case 7:
-      sscanf(line, "%d", &item.type);
-      break;
-    default:
-      break;
-  }
+  item.x_pos = item.y_pos = item.am = 0;
 
-  item.x_pos = 0;
-  item.y_pos = 0;
+  if (cur_line <= 1) {
+    if (line[0] == '\n')
+      strcpy(cur_line == 0 ? item.name : item.desc, "undefined");
+    else
+      sscanf(line, "%[^\n]", cur_line == 0 ? item.name : item.desc);
+    return item;
+  }
+  if (cur_line == 2) {
+    sscanf(line, "%c%*[^0-9]%d%*[^0-9]%d%*[^0-9]%d%*[^0-9]%d",
+           &item.content, // Content
+           &item.rar,     // Rarity
+           &item.price,   // Price
+           &item.dur,     // Durability
+           &item.type);   // Type
+    return item;
+  }
+  if (cur_line == 3) {
+    BONUS *b = &item.bonus[cur_line - 3];
+    sscanf(line, "%*[^0-9]%s%*[^0-9]%d%*[^0-9]%d%*[^0-9]%d",
+           b->name,    // name
+           &b->dur,    // duration
+           &b->target, // target
+           &b->value); // value
+    return item;
+  }
 
   return item;
 }
@@ -67,6 +60,15 @@ ITEM *read_items_from_file(const char *filename, int *num_items) {
 
   while ((read = getline(&line, &len, file)) != -1) {
     line[strcspn(line, "\n")] = 0;
+
+    int is_empty = 1;
+    for (char *p = line; *p; p++) {
+      if (!isspace((unsigned char)*p)) {
+        is_empty = 0;
+        break;
+      }
+    }
+
     if (*num_items >= capacity) {
       capacity *= 2;
       items = realloc(items, capacity * sizeof(ITEM));
@@ -77,12 +79,13 @@ ITEM *read_items_from_file(const char *filename, int *num_items) {
         return NULL;
       }
     }
-    if (cur_line >= 8) {
+    if (is_empty) {
       cur_line = 0;
       (*num_items)++;
       continue;
     }
-    items[*num_items] = parse_item(line, cur_line++);
+    items[*num_items] = parse_item(line, cur_line);
+    cur_line++;
   }
 
   free(line);

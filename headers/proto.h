@@ -6,22 +6,39 @@
 typedef enum { normal, on_grid, watch_up, cutscene, free_slide, mv_count } MOVE_TYPE;
 typedef enum { press, autom, disabled, atk_type_count } ATK_TYPE;
 typedef enum { entrance, idle, attack0, attack, attack2, SP_attack, SP_attack2, reposition, regen, hurt, shield, retreat, call, die, null, BOSS_ACTIONS_COUNT } BOSS_ACTIONS;
-typedef enum { MOR_SC, MOR_HP, MOR_PRJ, MOR_SHLD, MOR_ATTR, BET_PRJ, MOR_ITEM, MAP, MOR_SPD, MOR_PWR, MOR_XP, MOR_GLD, TELEPORT, AOE, FREEZE, CRAFT_MAT, WEAPON, ARMOR, ITEM_TYPE_COUNT } ITEM_Type;
+typedef enum { MAP, MATERIAL, WEAPON, ARMOR, EXPANDABLE, ITEM_Type_COUNT } ITEM_Type;
+typedef enum { SCORE, HP, PRJ, SHLD, MAGNET, LUCK, SPEED, POWER, WISE, GOLD, Bonus_COUNT } Bonus_Type;
+typedef enum { TELEPORT, SHOW_RADAR, AOE, HURT_MOB, HURT_PLR, HEAL_PLR, FREEZE, Effect_COUNT } Effect_Type;
+typedef enum { SELF, CLOSEMOB, SELECTED_MOB, ALLMOBS, Taget_COUNT } Target_Type;
+typedef enum { COMMON, UNCOMMON, RARE, ARTIFACT, DIVINE, MYSTIC, DIABOLICAL, RARITY_COUNT } RARITY;
 
 typedef enum { nm, paused, shopping, boss_fight, dialog, GAME_STATE_COUNT } GAME_STATE;
-typedef enum { up, down, right, left, up_left, up_right, down_left, down_right, none, vert, ver_left, ver_right, hor, hor_up, hor_down, all, DIR_COUNT } DIR;
+typedef enum { up, down, right, left, up_left, up_right, down_left, down_right, none, vert, ver_left, ver_right, hor, hor_up, hor_down, all, circular, DIR_COUNT } DIR;
 typedef enum { SHOP, ARMORY, HOUSE, FORTRESS, NONE, BLD_TYPE_COUNT } BLD_TYPE;
-typedef enum { base, magnet, bomb, big, prj_count, PRJ_TYPES_COUNT } PRJ_TYPES;
+typedef enum { base, magnet, bomb, big, ricochet, PRJ_TYPES_COUNT } PRJ_TYPES;
 typedef enum { SELLER, SHOPPER, QUEST_GIVER, EXPLORER, NPC_TYPES_COUNT } NPC_TYPES;
-typedef enum { red, blue, green, yellow, COLOR_COUNT } COLOR;
-typedef enum { COMMON, UNCOMMON, RARE, MYSTIC, ARTIFACT, DIVINE, DIABOLICAL, RARITY_COUNT } RARITY;
+typedef enum { green, blue, yellow, orange, red, purple, COLOR_COUNT } COLOR;
 
 typedef struct {
-  char name[50], content, desc[256];
+  int value, dur;
+  Target_Type target;
+  char name[50];
+} BONUS;
+
+typedef struct {
+  int value, dur;
+  Target_Type target;
+  char name[50];
+} EFFECT;
+
+typedef struct {
+  char name[50], desc[256], content;
+  int price, dur, am;
+  int x_pos, y_pos, center_x, center_y;
   RARITY rar;
-  int price, val_inc, dur;
-  int x_pos, y_pos;
   ITEM_Type type;
+  BONUS bonus[10];
+  EFFECT effect[10];
 } ITEM;
 
 typedef struct {
@@ -32,8 +49,8 @@ typedef struct {
 } QUEST;
 
 typedef struct {
-  int hp, shield, weap, speed, atk_speed, atk_pow, atk_am;
-  int hurt_timer, atk_reload, is_blocked;
+  int hp, maxHP, spd, maxSpd, shield, weap, atk_spd, atk_pow, atk_am;
+  int death_timer, hurt_timer, atk_reload, is_blocked;
   int x_pos, y_pos;
   DIR dir;
   DIR lk_dir;
@@ -60,7 +77,9 @@ typedef struct {
 } BLDING;
 
 typedef struct {
-  int x_pos, y_pos, col_timer;
+  float angular_velocity;
+  int x_pos, y_pos, col_timer, angular_offset;
+  int prv_index, dur;
   DIR dir;
   PRJ_TYPES type;
 } PROJ;
@@ -77,19 +96,21 @@ typedef struct {
   PRJ_TYPES cur_proj;
   BLD_TYPE cur_blding;
   GAME_STATE g_st;
-  int prj_qual, attr, shots_fired, level;
+  NPC *cur_seller;
+  char *minimap;
   long int score, max_score;
-  int ITEM_chance, lv_choices;
+  int prj_qual, attr, shots_fired, level;
+  float luck;
+  int lv_choices;
   int gl_x_pos, gl_y_pos;
   int plr_x_centr, plr_y_centr, prj_col_index, plr_col_index;
   int boss_mode, is_framing;
-  int input, last_input;
-  int shift_on;
-  int seller;
-  int num_items;
-  NPC *cur_seller;
+  int input, last_input, shift_on;
+  int seller, num_items;
+  int owned_amnt;
+  int inv_incrmnt;
+
   int cur_bld_index, is_in_dialog, cur_floor;
-  char *minimap;
 } GAME;
 
 typedef struct {
@@ -109,20 +130,20 @@ typedef int bool;
 int main_loop();
 
 // INIT
-void initialize_game(GAME *game, SHIP *plr, ITEM *ITEMs, SHIP *mobs, PROJ *proj, PROJ *mobprj, STAR *stars, BLDING *building);
+void initialize_game(GAME *game, SHIP *plr, ITEM *items, SHIP *mobs, PROJ *proj, PROJ *mobprj, STAR *stars, BLDING *building);
 void init_boss(GAME *game, BOSS *boss);
-PROJ Init_bullet(PROJ *prj, PRJ_TYPES type, DIR dir, int BUFFER_SIZE, int x_pos, int y_pos);
+int Init_bullet(PROJ *prj, PRJ_TYPES type, DIR dir, int BUFFER_SIZE, int x_pos, int y_pos);
 char *init_blank_canv(int w, int h, int has_ext, char interior);
 void init_new_buildings(GAME *game, BLD_TYPE type, BLDING *bld, int x, int y);
 
 // updS
 int set_input(char *canv, GAME *game, BOSS boss, SHIP *plr, PROJ *proj, PROJ *mob_prj, int *has_moved, int time, int *show_grid, int *god_mode);
-void upd_game_state(char *canv, GAME *game, SHIP *plr, BOSS *boss, SHIP *mobs, PROJ *proj, PROJ *mobprj, ITEM *ITEMs, BLDING *bldings, STAR *stars, int has_moved, int time, int *wind);
+void upd_game_state(char *canv, GAME *game, SHIP *plr, BOSS *boss, SHIP *mobs, PROJ *proj, PROJ *mobprj, ITEM *items, BLDING *bldings, STAR *stars, int has_moved, int time, int *wind);
 int upd_player(char *canv, GAME *game, SHIP *plr, PROJ *proj, int has_moved, int time);
 int upd_background(char *canv, STAR *stars, GAME game, BOSS boss, SHIP plr, int has_moved, int time);
-int upd_boss_fight(char *canv, GAME *game, BOSS *boss, SHIP *mobs, PROJ *mobprj, ITEM *ITEMs, SHIP *plr, int time);
-int upd_ITEMs(char *canv, GAME *game, SHIP *plr, ITEM *ITEMs, int time, int reset);
-int upd_mob_pos(char *canv, GAME *game, BOSS boss, SHIP *mobs, PROJ *mobprj, ITEM *ITEMs, SHIP *plr, int time, int reset);
+int upd_boss_fight(char *canv, GAME *game, BOSS *boss, SHIP *mobs, PROJ *mobprj, ITEM *items, SHIP *plr, int time);
+int upd_items(char *canv, GAME *game, SHIP *plr, ITEM *items, int time, int reset);
+int upd_mob_pos(char *canv, GAME *game, BOSS boss, SHIP *mobs, PROJ *mobprj, ITEM *items, SHIP *plr, int time, int reset);
 int upd_plr_proj(char *canv, GAME *game, PROJ *proj, SHIP *mobs, BOSS *boss, SHIP *plr, int time, int reset);
 int upd_mob_prj(char *canv, GAME *game, PROJ *mobprj, SHIP *plr, int time, int reset);
 int upd_wind(char *canv, int *wind, GAME *game, SHIP *shp, BOSS *boss);
@@ -152,9 +173,8 @@ void HANDLE_CONSTANTS(GAME *game, BOSS *boss, SHIP *plr, PROJ *mobprj, int time,
 // CANV
 void render_game(GAME *game, BOSS boss, SHIP *plr, SHIP *mobs, BLDING *bldings, PROJ *proj, PROJ *mobprj, int *wind, char *canv, int time, int has_moved);
 int render_canvas(char *canv, GAME *game, int time);
-int set_lotterie_menu(char *header, char *canv, GAME *game, SHIP *plr);
 char *set_new_width(char *src, int new_width);
-int write_on_canv(char *src, char *dst, int x_pos, int y_pos);
+char *write_on_canv(char *src, char *dst, int x_pos, int y_pos);
 char *get_triangle(char interior, DIR dir, int h, int w, int color);
 char *get_circle(int width, int height, char interior, float thickness);
 int set_over_canv(char *canv, int left_padding, int top_padding, const char *format, ...);
@@ -163,11 +183,17 @@ int set_text_red(char *src);
 void render_text_in_color(char *c, char __, char *color);
 int is_in_canv(int x_pos, int y_pos, int width, int height, int canv_x, int canv_y, int canv_w, int canv_h, DIR d);
 char *get_formatted_text(const char *format, ...);
+char *swap_line(char *txt, int i, DIR d);
+char *mirror_txt(char *txt, int x_center, DIR d);
+char *get_text_bubble(char *txt);
 
 // TOOLS
 void set_nonblocking_mode(int enable);
-int get_width(char *src);
-int get_height(char *src);
+int get_index(char *canv, int x_pos, int y_pos);
+int get_width(const char *src);
+int get_height(const char *src);
+char get_index_value(char *canv, int c_width, int c_height, int x, int y);
+void reset_item(ITEM *itm);
 int crop_x(char *src, int from_x);
 int rand_range(int min, int max);
 int is_pos_free(SHIP *mobs, int current_mob, int x, int y);
@@ -179,17 +205,22 @@ DIR get_prj_dir(int w_prj, int max_prj, SHIP plr, DIR d);
 DIR get_dir_to_target(int target_x, int target_y, int x_pos, int y_pos, int has_diag);
 int set_plr_death(char *canv, GAME game, SHIP plr);
 int is_in_string(char c, char *str);
-char get_at_index(char *canv, int c_width, int c_height, int x, int y);
 int color_text(COLOR col, char *text, int fill_interior);
+void Color_from_index(COLOR col, char **text);
 void tile_canvas(char *canv, int width, int tile_size);
 void Copy_Item(ITEM *to, ITEM from);
 int Contains_item(ITEM a, ITEM *items, int size);
 void Generate_items(ITEM *list, NPC *n, int amount, int list_size);
+ITEM get_item(RARITY rar, ITEM_Type type, ITEM *items, int buffer_size);
+int determineRarity(float luck);
 
 // DEBUG
 int show_header(char *canv, char *header, GAME *game, SHIP plr, SHIP *mobs, BLDING *bldng, BOSS boss, int time, int has_moved, int *plr_shwcl_tm, int *prj_shwcl_tm);
 int show_grid_view(char *canv, GAME game, char show_grid);
+int show_arrays_content(GAME game, PROJ *mobprj, PROJ *plrPRJ, SHIP *mobs, BLDING *bldings, ITEM *in_buff_itms, ITEM *in_bag_itms);
+void handle_mini_map(char *canv, GAME *game, SHIP plr, SHIP *mobs, BLDING *bldng, BOSS boss, ITEM *items, int time);
 
 // ITEM_PARSER
 ITEM *read_items_from_file(const char *filename, int *num_items);
+
 #endif

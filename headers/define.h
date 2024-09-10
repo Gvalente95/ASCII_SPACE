@@ -29,15 +29,12 @@
 #define MEDIUM_SHADE "\u2592"
 #define DARK_SHADE "\u2593"
 
-// DEBUG
-#define SHOW_GRID 0
-
 //  BUFFERS
 #define PROJ_BUFFER 1000
 #define PROJ_TYPES 4
 #define PRJ_MOB_BUFFER 3000
-#define ITEM_BUFFER 50
-#define ITEMS_OWNED_BUFFER 200
+#define ITEM_BUFFER 200
+#define items_OWNED_BUFFER 200
 #define STAR_BUFFER 20
 #define BLDING_BUFFER 100
 #define WIND_BUFFER 60
@@ -45,8 +42,8 @@
 #define BOSS_WIND_MAX (WIND_BUFFER / 2)
 #define CELL_AM 8
 
-//  SIZE
-#define CANV_W 100
+//  SIZES
+#define CANV_W 120
 #define UPG_CANV_W (CANV_W - (CANV_W / 6))
 #define UPG_CANV_H (CANV_H - (CANV_H / 6))
 #define CANV_H (CANV_X_CENTER)
@@ -74,23 +71,35 @@
 #define MAX(value_A, value_B) (value_A > value_B ? value_A : value_B)
 #define MIN(value_A, value_B) (value_A < value_B ? value_A : value_B)
 
-// STATS
-
-#define INCR_Y_DIR(object_direction) (())
-
 // PLAYER
+#define circ_max_am 50
+#define circ_add_interval 50
 #define PLR_MAX_HP 5
-#define BASE_ITEM_CHNC 30
 #define HURT_DUR 60
 #define shot_lock 50
-#define STRT_ITEM_CHNC 10
-#define HURT_SLEEPTIME 200000
+#define HURT_SLEEPTIME 100000
 #define PLR_GRID_SPD 10
+
+// MOBS
+#define MOB_HURT_DUR 5
+#define MOB_DEATH_DUR 10
+#define MOB_OUT_LIM 500
+#define MOBS_BUFFER 150
+#define MOBS1_BUFFER MOBS_BUFFER / 2
+#define MOBS2_BUFFER MOBS_BUFFER / 2
+#define MOBS_1_MAXHP 2
+#define MOBS_2_MAXHP 8
+#define MOBS_1_SPD 5
+#define MOBS_2_SPD 10
 
 // SHOP
 #define SHOP_INVENTORY 50
-#define SHOP_VIEW_ITEMS 10
+#define SHOP_VIEW_items 10
 #define SHOP_RENEWAL 5000
+
+// ITEMS
+#define BASE_ITEM_CHNC 80
+#define STRT_ITEM_CHNC 10
 
 // BOSS
 #define BOSS_SPWNTIME 50000
@@ -105,17 +114,6 @@
 #define BOSS_RETREAT_DUR 250
 #define BOSS_SHIELD_DUR 200
 
-// MOBS
-#define MOB_OUT_LIM 500
-#define MOBS_BUFFER 150
-#define MOBS1_BUFFER MOBS_BUFFER / 2
-#define MOBS2_BUFFER MOBS_BUFFER / 2
-
-#define MOBS_1_MAXHP 2
-#define MOBS_2_MAXHP 8
-#define MOBS_1_SPD 5
-#define MOBS_2_SPD 10
-
 // ICONS
 #define SCR_SMB "★"
 #define PROJ_SMB "+"
@@ -125,14 +123,15 @@
 #define HEART_SMB "❤️"
 #define STAR_SMB "✧"
 
-#define RED_ICON '\xA0'
-#define COIN_IC '\xA1'   // ¤
-#define WEAP_IC '\xA2'   // Æ
-#define SHIELD_IC '\xA3' // ×
-#define HEART_IC '\xA4'  // §
-#define ATTR_IC '\xA5'   // «
-#define LUCK_IC '\xA6'   // ¶
-#define STARS_IC '\xA7'  // ¨
+#define red_st '\xA0'
+#define grn_st '\xA1'   // ¤
+#define blu_st '\xA2'   // Æ
+#define yel_st '\xA3'   // ×
+#define orng_st '\xA4'  // §
+#define prpl_st '\xA5'  // «
+#define HEART_IC '\xA6' // ¶
+#define RED_ICON '\xA7'
+#define ERASE_IC '\xA8'
 
 #define DWNSTAIR_IC '\xA8' // ¨
 #define UPSTAIR_IC '\xA9'  // ¨
@@ -161,6 +160,7 @@
 #define SHP_HOR '\xE2'   // Á
 #define SHP_VER '\xE3'   // ´
 
+// FX
 #define EXPL_START '\xF0'   // à
 #define PRJ_COL '\xF1'      // à
 #define WIND_VER '\xF2'     // Þ
@@ -170,6 +170,7 @@
 #define WIND_ALL_VER '\xF6' // ú
 #define WIND_ALL_HOR '\xF7' // ú
 
+// PROJ
 #define PRJ_BS_VER '\xAA'    // ±
 #define PRJ_BS_HOR '\xAB'    // ÷
 #define PRJ_BS_DIAG_L '\xAC' // ¼
@@ -190,10 +191,15 @@
 #define PRJ_BIG_DIAG_L '\xCC' // ¼
 #define PRJ_BIG_DIAG_R '\xCD' // ½
 
-#define MPRJ_BS_VER '\xCE'    // ±
-#define MPRJ_BS_HOR '\xCF'    // ÷
-#define MPRJ_BS_DIAG_L '\xDA' // ¼
-#define MPRJ_BS_DIAG_R '\xDB' // ½
+#define PRJ_RIC_VER '\xCE'    // ±
+#define PRJ_RIC_HOR '\xCF'    // ÷
+#define PRJ_RIC_DIAG_L '\xDA' // ¼
+#define PRJ_RIC_DIAG_R '\xDB' // ½
+
+#define MPRJ_BS_VER '\xDC'    // ±
+#define MPRJ_BS_HOR '\xDD'    // ÷
+#define MPRJ_BS_DIAG_L '\xDE' // ¼
+#define MPRJ_BS_DIAG_R '\xDF' // ½
 
 // MINIMAP
 #define MOB_MM_IC '\xEA'   // ÷
