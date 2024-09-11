@@ -3,8 +3,30 @@
 #ifndef DEFINE_H
 #define DEFINE_H
 
-#define SAVEFILE "savefile.txt"
-#define ITEMFILE "items.txt"
+#define SAVEFILE "stuff/savefile.txt"
+#define ITEMFILE "stuff/items.txt"
+
+// AUDIO
+#define AU_bg_world "audio_files/music/bg_world.mp3"
+#define AU_bg_house "audio_files/music/bg_house.mp3"
+#define AU_ship_mv "audio_files/fx/ship_drive.mp3"
+
+#define AU_click1 "audio_files/UI/click1.mp3"
+#define AU_click2 "audio_files/UI/click2.mp3"
+#define AU_change_sel "audio_files/UI/change_sel.mp3"
+#define AU_proj1 "audio_files/UI/proj1.mp3"
+#define AU_high_pitch "audio_files/UI/high_pitch.mp3"
+#define AU_high_pitch2 "audio_files/UI/high_pitch2.mp3"
+#define AU_expl1 "audio_files/fx/expl1.mp3"
+#define AU_expl2 "audio_files/fx/expl2.mp3"
+#define AU_expl3 "audio_files/fx/expl3.mp3"
+#define AU_expl4 "audio_files/fx/expl4.mp3"
+#define AU_hurt1 "audio_files/fx/hurt1.mp3"
+#define AU_hurt2 "audio_files/fx/hurt2.mp3"
+#define AU_hurt3 "audio_files/fx/hurt3.mp3"
+#define AU_hurt4 "audio_files/fx/hurt4.mp3"
+#define AU_hurt5 "audio_files/fx/hurt5.mp3"
+#define AU_thump "audio_files/fx/thump.mp3"
 
 // COLORS
 #define RED "\033[31m"
@@ -138,7 +160,7 @@
 
 #define COL_HOR '\xB0' // Í
 #define COL_VER '\xB1' // º
-#define SHLD_OFF_MOB_IC '\xB2'
+#define SHLD_OFF_MOB_IC ';'
 #define SHLD_ON_MOB_IC '\xB3'
 #define STAR_IC '\xB4'
 #define STAR_IC2 '\xB5'

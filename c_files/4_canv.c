@@ -3,32 +3,39 @@
 void render_mobs(char *canv, GAME *game, SHIP *mobs, int time) {
   if (game->g_st != boss_fight) {
     for (int i = 0; i < MOBS_BUFFER - 1; i++) {
-      SHIP mob = mobs[i];
-      char *mob_tri;
-
-      if (i <= MOBS1_BUFFER)
-        mob_tri = get_triangle('*', mob.dir, SHIP_W, SHIP_H, 1);
-      else
-        mob_tri = mob.dir == up ? strdup(MB2_U) : mob.dir == down ? strdup(MB2_D) : mob.dir == left || mob.dir == up_left || mob.dir == down_left ? strdup(MB2_L) : strdup(MB2_R);
-      if (mob.death_timer > 0) set_text_red(mob_tri);
-      if (mob.death_timer > 0) {
-        int i = 0;
-        while (mob_tri[i]) {
-          if (mob_tri[i] != ' ' && mob_tri[i] != '\n') mob_tri[i] = EXPL_START;
-          i++;
+      SHIP *mob = &mobs[i];
+      if (mob->x_pos - SHIP_W > 0 && mob->x_pos < CANV_W && mob->y_pos - SHIP_H < CANV_H && mob->y_pos < CANV_H && canv[i] != 'N' && canv[i] != '#') {
+        char *mob_tri;
+        if (i <= MOBS1_BUFFER)
+          mob_tri = get_triangle('*', mob->dir, SHIP_W, SHIP_H, 1);
+        else if (i <= MOBS_BUFFER - 50)
+          mob_tri = mob->dir == up ? strdup(MB2_U) : mob->dir == down ? strdup(MB2_D) : mob->dir == left || mob->dir == up_left || mob->dir == down_left ? strdup(MB2_L) : strdup(MB2_R);
+        else if (i <= MOBS_BUFFER - 20)
+          mob_tri = strdup(SHIELD_GFX);
+        else
+          mob_tri = strdup(BOSS1);
+        if (mob->death_timer > 0) set_text_red(mob_tri);
+        if (mob->death_timer > 0) {
+          int i = 0;
+          while (mob_tri[i]) {
+            if (mob_tri[i] != ' ' && mob_tri[i] != '\n') mob_tri[i] = EXPL_START;
+            i++;
+          }
         }
+        int st_index = get_index(canv, mob->x_pos, mob->y_pos - 5);
+        if (st_index > -1 && canv[st_index] != '\n') {
+          char *txt = malloc(15);
+          sprintf(txt, "%d", mob->hp);
+          if (mob->hurt_timer > 0) color_text(red, txt, 1);
+          set_label(canv, &st_index, txt, '\0');
+        }
+        if (mob->hurt_timer > 0) {
+          mob->hurt_timer--;
+          color_text(red, mob_tri, 0);
+        }
+        write_on_canv(mob_tri, canv, mob->x_pos, mob->y_pos);
+        if (mob_tri != NULL) free(mob_tri);
       }
-      if (mobs[i].hurt_timer > 0) {
-        mobs[i].hurt_timer--;
-        color_text(red, mob_tri, 0);
-      }
-
-      if (mob.x_pos - SHIP_W > 0 && mob.x_pos < CANV_W && mob.y_pos - SHIP_H < CANV_H && mob.y_pos < CANV_H && canv[i] != 'N' && canv[i] != '#') {
-        write_on_canv(mob_tri, canv, mob.x_pos, mob.y_pos);
-        int st_index = get_index(canv, mob.x_pos, mob.y_pos - 5);
-        if (st_index > -1) { set_label(canv, &st_index, "", mob.hp); }
-      }
-      if (mob_tri != NULL) free(mob_tri);
     }
   }
 }
@@ -136,7 +143,7 @@ void render_npcs(GAME *game, BOSS boss, SHIP *plr, SHIP *mobs, BLDING *bldings, 
 
     if (game->is_in_dialog != i) {
       if (rand() % 200 == 0) n->lk_dir = rand() % 4;
-      if (rand() % 50 == 0 && n->type != SELLER) n->dir = n->lk_dir;
+      if (rand() % 500 == 0 && n->type != SELLER) n->dir = n->lk_dir;
     } else
       n->dir = none;
 

@@ -18,6 +18,7 @@ typedef enum { SHOP, ARMORY, HOUSE, FORTRESS, NONE, BLD_TYPE_COUNT } BLD_TYPE;
 typedef enum { base, magnet, bomb, big, ricochet, PRJ_TYPES_COUNT } PRJ_TYPES;
 typedef enum { SELLER, SHOPPER, QUEST_GIVER, EXPLORER, NPC_TYPES_COUNT } NPC_TYPES;
 typedef enum { green, blue, yellow, orange, red, purple, COLOR_COUNT } COLOR;
+typedef enum { CharCoins, Stellaris, Quantums, CosmoCoins, BitCredits, CURRENCY_COUNT } CURRENCY_TYPES;
 
 typedef struct {
   int value, dur;
@@ -51,7 +52,7 @@ typedef struct {
 typedef struct {
   int hp, maxHP, spd, maxSpd, shield, weap, atk_spd, atk_pow, atk_am;
   int death_timer, hurt_timer, atk_reload, is_blocked;
-  int x_pos, y_pos;
+  int x_pos, y_pos, width, height;
   DIR dir;
   DIR lk_dir;
 } SHIP;
@@ -89,6 +90,11 @@ typedef struct {
 } STAR;
 
 typedef struct {
+  int amount;
+  CURRENCY_TYPES type;
+} CURRENCY;
+
+typedef struct {
   DIR allowed_dir, allowed_lk_dir;
   ITEM *itm_ownd, *itm_list;
   MOVE_TYPE mv_type;
@@ -109,8 +115,8 @@ typedef struct {
   int seller, num_items;
   int owned_amnt;
   int inv_incrmnt;
-
   int cur_bld_index, is_in_dialog, cur_floor;
+  CURRENCY currencies[CURRENCY_COUNT - 1];
 } GAME;
 
 typedef struct {
@@ -209,10 +215,11 @@ int color_text(COLOR col, char *text, int fill_interior);
 void Color_from_index(COLOR col, char **text);
 void tile_canvas(char *canv, int width, int tile_size);
 void Copy_Item(ITEM *to, ITEM from);
-int Contains_item(ITEM a, ITEM *items, int size);
+int Get_duplicate_index(ITEM a, ITEM *items, int size);
 void Generate_items(ITEM *list, NPC *n, int amount, int list_size);
 ITEM get_item(RARITY rar, ITEM_Type type, ITEM *items, int buffer_size);
 int determineRarity(float luck);
+void reorder_list(ITEM *list, int max_size);
 
 // DEBUG
 int show_header(char *canv, char *header, GAME *game, SHIP plr, SHIP *mobs, BLDING *bldng, BOSS boss, int time, int has_moved, int *plr_shwcl_tm, int *prj_shwcl_tm);
@@ -222,5 +229,9 @@ void handle_mini_map(char *canv, GAME *game, SHIP plr, SHIP *mobs, BLDING *bldng
 
 // ITEM_PARSER
 ITEM *read_items_from_file(const char *filename, int *num_items);
+
+// AUDIO
+void stop_sound(pid_t pid);
+pid_t play_sound(const char *filename, int loop);
 
 #endif

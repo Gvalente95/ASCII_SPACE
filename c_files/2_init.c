@@ -14,6 +14,10 @@ void initialize_game(GAME *game, SHIP *plr, ITEM *items, SHIP *mobs, PROJ *proj,
   game->cur_proj = base, game->cur_blding = NONE, game->cur_bld_index = -1;
   game->is_in_dialog = -1, game->cur_floor = -1, game->owned_amnt = 0, game->inv_incrmnt = 0;
   game->minimap = NULL, game->cur_seller = NULL;
+  for (int x = 0; x < CURRENCY_COUNT - 1; x++) {
+    game->currencies[x].amount = 500;
+    game->currencies[x].type = x;
+  }
 
   plr->x_pos = PLR_CENTER_X + 5;
   plr->y_pos = PLR_CENTER_Y;
@@ -23,9 +27,8 @@ void initialize_game(GAME *game, SHIP *plr, ITEM *items, SHIP *mobs, PROJ *proj,
   plr->atk_reload = 1;
   plr->dir = up, plr->lk_dir = up;
 
-  for (int i = 0; i < items_OWNED_BUFFER; i++) {
+  for (int i = 0; i < items_OWNED_BUFFER; i++)
     reset_item(&game->itm_ownd[i]);
-  }
 
   for (int i = 0; i < ITEM_BUFFER; i++)
     reset_item(&items[i]);
@@ -40,6 +43,8 @@ void initialize_game(GAME *game, SHIP *plr, ITEM *items, SHIP *mobs, PROJ *proj,
     mobs[i].x_pos = x, mobs[i].y_pos = y, mobs[i].is_blocked = 0;
     mobs[i].shield = mobs[i].weap = mobs[i].hurt_timer = mobs[i].death_timer = 0;
     mobs[i].maxHP = is_2 ? MOBS_2_MAXHP : MOBS_1_MAXHP, mobs[i].hp = mobs[i].maxHP;
+    mobs[i].width = is_2 ? 5 : 3;
+    mobs[i].height = is_2 ? 5 : 2;
     mobs[i].maxSpd = is_2 ? MOBS_2_SPD : MOBS_1_SPD, mobs[i].spd = mobs[i].maxSpd;
     mobs[i].dir = rand_range(0, 3);
     mobs[i].atk_spd = is_2 ? 50 : 25;
@@ -76,7 +81,6 @@ void init_new_buildings(GAME *game, BLD_TYPE type, BLDING *bld, int x, int y) {
   bld->type = type;
   bld->floors = (char **)malloc(sizeof(char *) * 10);
   bld->y_s_ext = y_s_ext, bld->x_s_ext = x_s_ext;
-
   bld->npc_am = rand_range(2, 5), bld->npcs = malloc(sizeof(NPC) * bld->npc_am);
 
   char *txt = strdup(BLDING_LABELS[type]);
@@ -182,8 +186,14 @@ void init_new_buildings(GAME *game, BLD_TYPE type, BLDING *bld, int x, int y) {
     n->lk_dir = rand_range(0, 4), n->dir = none;
 
     n->items = malloc(sizeof(ITEM) * SHOP_INVENTORY);
-    system("clear");
     Generate_items(game->itm_list, n, SHOP_INVENTORY, game->num_items);
+    system("clear");
+    printf("NPC items:\n\n");
+    for (int x = 0; x < SHOP_INVENTORY - 1; x++) {
+      printf("%d: %s am:%d\n", x, n->items[x].name, n->items[x].am);
+      n->items[x].am = rand_range(5, 99);
+    }
+
   } else {
     bld->ext_cont = init_blank_canv(x_s, y_s, 0, ' ');
     char *ext_in = init_blank_canv(x_s_ext, y_s_ext, 2, '_');

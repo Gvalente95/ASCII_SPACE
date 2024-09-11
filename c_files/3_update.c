@@ -86,7 +86,10 @@ int set_input(char *canv, GAME *game, BOSS boss, SHIP *plr, PROJ *proj, PROJ *mo
         if (is_dir_allowed(lk_dir, game->allowed_lk_dir)) plr->lk_dir = lk_dir;
         return (arrow == 'A' ? '^' : arrow == 'B' ? '$' : arrow == 'C' ? '<' : '>');
       case ' ':
-        if (game->atk_type != disabled && !plr->atk_reload) launch_proj(game, plr, proj);
+        if (game->atk_type != disabled && !plr->atk_reload) {
+          play_sound(AU_change_sel, 0);
+          launch_proj(game, plr, proj);
+        }
         return (c);
       case 'w':
       case 'a':
@@ -124,7 +127,7 @@ int set_input(char *canv, GAME *game, BOSS boss, SHIP *plr, PROJ *proj, PROJ *mo
           plr->atk_am = 1, plr->atk_pow = 1, plr->atk_spd = 1, plr->hp = 5, plr->weap = 1;
         return (c);
       case 'q':
-        exit(0);
+        return (c);
       case '<':
         game->is_framing = 1;
         return (c);
@@ -137,7 +140,7 @@ int set_input(char *canv, GAME *game, BOSS boss, SHIP *plr, PROJ *proj, PROJ *mo
 void upd_game_state(char *canv, GAME *game, SHIP *plr, BOSS *boss, SHIP *mobs, PROJ *proj, PROJ *mobprj, ITEM *items, BLDING *buildings, STAR *stars, int has_moved, int time, int *wind) {
   if (canv == NULL || game == NULL || plr == NULL || boss == NULL || mobs == NULL || proj == NULL || mobprj == NULL || items == NULL || buildings == NULL || stars == NULL) return;
 
-  // if (time % circ_add_interval == 0) Init_bullet(proj, game->cur_proj, circular, PROJ_BUFFER, 0, 0);
+  if (time % circ_add_interval == 0) Init_bullet(proj, game->cur_proj, circular, PROJ_BUFFER, 0, 0);
   upd_player(canv, game, plr, proj, has_moved, time);
   upd_mob_pos(canv, game, *boss, mobs, mobprj, items, plr, time, 0);
 
@@ -273,11 +276,13 @@ int upd_items(char *canv, GAME *game, SHIP *plr, ITEM *items, int time, int rese
         }
         if (!is_dupl) {
           Copy_Item(&game->itm_ownd[game->owned_amnt], *itm);
+          game->itm_ownd[game->owned_amnt].am = 1;
           game->owned_amnt++;
         }
         game->inv_incrmnt = inv;
         game->itm_ownd[inv].center_x += 30;
         reset_item(itm);
+        play_sound(AU_high_pitch, 0);
       }
     }
   }
@@ -292,12 +297,13 @@ int upd_mob_pos(char *canv, GAME *game, BOSS boss, SHIP *mobs, PROJ *mobprj, ITE
       SHIP *m = &mobs[i];
       if (reset) m->hp = 0;
 
-      if (time % 500 == 0) {
-        m->hp += 10;
-        m->atk_spd--, m->spd--;
-        if (m->spd <= 6) m->spd = 7;
-        if (m->atk_spd <= 0) m->atk_spd = 1;
-      }
+      /*
+            if (time % 500 == 0) {
+              m->hp++;
+              m->atk_spd--, m->spd--;
+              if (m->spd <= 6) m->spd = 7;
+              if (m->atk_spd <= 0) m->atk_spd = 1;
+            }*/
 
       if (time % BOSS_SPWNTIME >= BOSS_SPWNTIME - 100 && time % BOSS_SPWNTIME <= BOSS_SPWNTIME) m->hp = 0;
 
@@ -311,6 +317,7 @@ int upd_mob_pos(char *canv, GAME *game, BOSS boss, SHIP *mobs, PROJ *mobprj, ITE
       if (m->hp <= 0 && m->death_timer == 0) { m->death_timer += MOB_DEATH_DUR; }
       if (m->death_timer >= 1) {
         if (m->death_timer == 1) {
+          play_sound(AU_expl2, 0);
           int x_offs = 0, y_offs = 0;
           for (int x = 0; x < ITEM_BUFFER - 1; x++) {
             int dist_btwn = 10;
@@ -318,9 +325,11 @@ int upd_mob_pos(char *canv, GAME *game, BOSS boss, SHIP *mobs, PROJ *mobprj, ITE
               int itm_rar = determineRarity(game->luck);
               ITEM new_item;
               new_item.content = '\0';
-              do
+              int tries = 0;
+              do {
                 (new_item = get_item(itm_rar, rand_range(0, ITEM_Type_COUNT - 1), game->itm_list, game->num_items));
-              while (new_item.content == '\0');
+                tries++;
+              } while (new_item.content == '\0' && tries < 200);
               Copy_Item(&items[x], new_item);
               items[x].center_x = m->x_pos + x_offs, items[x].center_y = m->y_pos + y_offs;
               items[x].x_pos = m->x_pos + y_offs, items[i].y_pos = m->y_pos;
@@ -396,6 +405,8 @@ int upd_plr_proj(char *canv, GAME *game, PROJ *proj, SHIP *mobs, BOSS *boss, SHI
         if (p->dur == -1) {
           p->col_timer = 0;
           int radius = 2;
+          play_sound(AU_expl4, 0);
+
           for (int y = -2; y <= 2; y++) {
             for (int x = -4; x <= 4; x++) {
               if (x == 0 && y == 0 || rand() % 5 == 0) continue;
@@ -439,12 +450,15 @@ int upd_plr_proj(char *canv, GAME *game, PROJ *proj, SHIP *mobs, BOSS *boss, SHI
         p->col_timer = 15;
       } else {
         for (int j = 0; j < MOBS_BUFFER; j++) {
+
           if (mobs[j].hurt_timer || mobs[j].x_pos == -1) continue;
-          if (abs(mobs[j].y_pos - p->y_pos) < 5 && abs(mobs[j].x_pos - p->x_pos) < 5) {
+          if (abs((mobs[j].y_pos + 2) - p->y_pos) < 5 && abs((mobs[j].x_pos + 2) - p->x_pos) < 2) {
             if (p->type == ricochet) {
+              play_sound(AU_high_pitch, 0);
               p->dur += 10;
             } else {
               p->col_timer = 15;
+              play_sound(AU_click2, 0);
               if (p->type == bomb) { p->x_pos = mobs[j].x_pos + 2, p->y_pos = mobs[j].y_pos + 2; }
               p->dir = none;
             }
@@ -732,14 +746,27 @@ int upd_collisions(char *canv, GAME *game, PROJ *proj, BOSS *boss, SHIP *mobs, P
   return plr->is_blocked;
 }
 
+ITEM **filter_items_by_type(ITEM *base, int type_sel, int max_items, int *filtered_count) {
+  ITEM **itms = (ITEM **)malloc(max_items * sizeof(ITEM *));
+  if (!itms) return NULL;
+  int bs_index = 0, itm_i = 0;
+  while (itm_i < max_items && base[bs_index].content) {
+    if (base[bs_index].type == type_sel && base[bs_index].am >= 1) itms[itm_i++] = &base[bs_index];
+    bs_index++;
+  }
+  if (filtered_count) *filtered_count = itm_i;
+  return itms;
+}
+
 int handle_seller_menu(char *canv, GAME *game, NPC *seller, BLDING *buildings, SHIP *plr, SHIP *mobs, BOSS *boss, PROJ *mobprj) {
   int wind_x = 6, wind_y = 3;
   int wind_width = (CANV_W - (wind_x * 2)), wind_height = CANV_H - (wind_y * 2);
-  int msg_width = wind_width - 20, msg_height = 6;
-  int y_dist = 1, x_dist, inp = -1;
-  int sel = 0;
-  int page = 0;
-  int obj_sel = 0;
+  int msg_width = wind_width - 15, msg_height = 6;
+  int itm_zone_xP = 5, itm_zone_yP = 5;
+  int y_dist = -1, x_dist = 5, inp = -1;
+  int sel = 0, page = 0, obj_sel = 0, type_sel = 0;
+  int is_at_end = 0;
+  ITEM *sel_itm;
 
   while (inp != 'q') {
     char *window = init_blank_canv(wind_width, wind_height, 1, '/');
@@ -747,62 +774,169 @@ int handle_seller_menu(char *canv, GAME *game, NPC *seller, BLDING *buildings, S
     write_on_canv(interior, window, 1, 1);
 
     char *buy_SQ = init_blank_canv(5, 3, sel == -1 ? 1 : page == 0 ? 2 : 0, ' '), *sell_SQ = init_blank_canv(6, 3, sel == -2 ? 1 : page == 1 ? 2 : 0, ' ');
-    char *discuss_SQ = init_blank_canv(6, 3, sel == -3 ? 1 : page == 3 ? 2 : 0, ' ');
+    char *discuss_SQ = init_blank_canv(6, 3, sel == -3 ? 1 : page == 2 ? 2 : 0, ' ');
     write_on_canv("BUY", buy_SQ, 1, 1), write_on_canv("SELL", sell_SQ, 1, 1), write_on_canv("DISCUSS", discuss_SQ, 1, 1);
     write_on_canv(buy_SQ, window, 5, 2), write_on_canv(sell_SQ, window, 15, 2), write_on_canv(discuss_SQ, window, 25, 2);
     free(buy_SQ), free(sell_SQ), free(discuss_SQ);
 
-    obj_sel = MAX(sel - 4, 0);
-    for (int i = 0; i < 5; i++) {
-      ITEM *itm = page == 0 ? &seller->items[i + obj_sel] : &game->itm_ownd[i + obj_sel];
-      if (itm->content == '\0')
-        continue;
-      else {
-        char *item_bg = init_blank_canv(msg_width, msg_height, i == sel || (i == 4 && sel >= 4) ? 1 : 0, '#');
-        int st_index = get_index(item_bg, 3, 1);
-        char *type_txt = strdup(itm_type_lbs[itm->type]);
-        char *name = strdup(itm->name);
-        char *desc = strdup(itm->desc);
-        Color_from_index((int)itm->rar, &name);
-        set_label(item_bg, &st_index, "x", itm->am + 1);
-        set_label(item_bg, &st_index, name, '\0');
-        st_index = get_index(item_bg, 3, 2);
-        set_label(item_bg, &st_index, type_txt, '\0');
-        st_index = get_index(item_bg, 3, 3);
-        set_label(item_bg, &st_index, desc, '\0');
-        st_index = get_index(item_bg, 3, 4);
-        set_label(item_bg, &st_index, "$", page == 0 ? itm->price : itm->price / 2);
-        write_on_canv(item_bg, window, 3, msg_height + (i * (y_dist + msg_height)));
-        free(item_bg), free(type_txt), free(name), free(desc);
-      }
+    if (sel >= 0) {
+      char *itm_zone = init_blank_canv(wind_width - itm_zone_xP * 2, wind_height - itm_zone_yP - 3, 1, '#');
+      write_on_canv(itm_zone, window, itm_zone_xP, itm_zone_yP);
     }
-    system("clear");
-    char *text = strdup(slr_dlgs[rand_range(0, 12)]);
-    char *bub = get_text_bubble(text);
-    write_on_canv(bub, window, wind_width - 10 - (get_width(bub) + 5), wind_height - 10);
-    write_on_canv(seller_idle_down1, window, wind_width - 10, wind_height - 10);
-    free(bub), free(text);
+
+    char fortune[16];
+    sprintf(fortune, "$%d", game->currencies[0].amount);
+    write_on_canv(fortune, window, wind_width - 10, 3);
+
+    if (page == 2) {
+      int seller_x = wind_width / 2, seller_y = wind_height / 2;
+      char *text = strdup(slr_dlgs[rand_range(0, 12)]);
+      char *bub = get_text_bubble(text);
+      write_on_canv(bub, window, seller_x - get_width(text) / 2, seller_y - get_height(bub));
+      write_on_canv(seller_idle_down1, window, seller_x, seller_y);
+      char *table = init_blank_canv(20, 5, 2, '.');
+      write_on_canv(table, window, seller_x - 10, seller_y + 3);
+      free(bub), free(text), free(table);
+    } else {
+      for (int i = 0; i < ITEM_Type_COUNT; i++) {
+        int x_dist = 15;
+        char *lbl_txt = strdup(itm_type_lbs[i]);
+        int size = strlen(lbl_txt);
+        char *lbl_sq = init_blank_canv(x_dist - 2, 3, i == type_sel ? 1 : 0, '#');
+        write_on_canv(lbl_txt, lbl_sq, ((x_dist - 2) / 2) - (size / 2), 1);
+        write_on_canv(lbl_sq, window, itm_zone_xP + 2 + i * x_dist, itm_zone_yP + 1);
+        free(lbl_sq), free(lbl_txt);
+      }
+      int filtered_count;
+      ITEM *base = page == 0 ? seller->items : game->itm_ownd;
+      ITEM **itms = filter_items_by_type(base, type_sel, page == 0 ? SHOP_INVENTORY - 1 : items_OWNED_BUFFER - 1, &filtered_count);
+      if (sel >= filtered_count) sel = MAX(filtered_count - 1, 0);
+
+      int show_am = 13;
+      for (int i = 0; i < show_am && i + obj_sel < filtered_count; i++) {
+        obj_sel = MAX(sel - show_am + 1, 0);
+        ITEM *itm = itms[i + obj_sel];
+
+        if (itm->content == '\0') {
+          if (sel == i) is_at_end = 1;
+          continue;
+        } else {
+          int is_sel = i == sel || (i == show_am - 1 && sel >= show_am - 1) ? 1 : 0;
+          if (is_sel) sel_itm = itms[i + obj_sel];
+          char *item_bg = init_blank_canv(msg_width, is_sel ? msg_height : msg_height - 2, is_sel ? 1 : 0, '#');
+          int x = is_sel ? 6 : 3;
+          int st_index = get_index(item_bg, x, 1);
+          char *type_txt = strdup(itm_type_lbs[itm->type]);
+          char *name = strdup(itm->name);
+          char *desc = strdup(itm->desc);
+          Color_from_index((int)itm->rar, &name);
+          set_label(item_bg, &st_index, "x", itm->am);
+          set_label(item_bg, &st_index, name, '\0');
+          st_index = get_index(item_bg, x, 2);
+          set_label(item_bg, &st_index, type_txt, '\0');
+          if (is_sel) {
+            st_index = get_index(item_bg, x, 3);
+            set_label(item_bg, &st_index, desc, '\0');
+            st_index = get_index(item_bg, x, 4);
+            set_label(item_bg, &st_index, "$", page == 0 ? itm->price : itm->price / 2);
+          }
+          int x_pos = itm_zone_xP + 3;
+          int y_pos = 4 + itm_zone_yP + (i * (y_dist + msg_height - 2));
+          if (i > sel) y_pos += 2;
+          write_on_canv(item_bg, window, x_pos, y_pos);
+          free(item_bg), free(type_txt), free(name), free(desc);
+        }
+      }
+      if (itms != NULL) free(itms);
+    }
 
     write_on_canv(window, canv, wind_x, wind_y);
     render_canvas(canv, game, 0);
     inp = -1;
-    while (inp == -1) {
+    while (inp == -1)
       inp = getchar();
-      sel += inp == 's' ? 1 : inp == 'w' ? -1 : 0;
-      if (sel <= -1) sel += inp == 'd' ? -1 : inp == 'a' ? 1 : 0;
-      if (sel < -3) sel = -3;
-      if (inp == ' ') {
-        if (sel == -1) page = 0;
-        if (sel == -2) page = 1;
-        if (sel == -3) page = 2;
+    if (is_in_string(inp, "wasd")) play_sound(AU_click1, 0);
+    if (inp == 'q') play_sound(AU_high_pitch, 0);
+    if (inp == ' ') play_sound(AU_change_sel, 0);
+
+    sel += inp == 's' ? 1 : inp == 'w' ? sel == 0 ? -1 - page : -1 : 0;
+    if (sel <= -1) {
+      sel += inp == 'd' ? -1 : inp == 'a' ? 1 : 0;
+      if (inp == 's') sel = 0;
+    } else if (inp == 'd' || inp == 'a')
+      type_sel += inp == 'd' ? 1 : inp == 'a' ? -1 : 0;
+    if (is_at_end && inp == 's') { sel--, is_at_end = 0; }
+    sel = MAX(sel, -3);
+    type_sel = MAX(type_sel, 0), type_sel = MIN(type_sel, ITEM_Type_COUNT - 1);
+
+    if (sel == -1) page = 0;
+    if (sel == -2) page = 1;
+    if (sel == -3) page = 2;
+
+    if (inp == ' ') {
+
+      if (sel >= 0 && sel_itm->content != '\0') {
+        char action[5];
+        page == 0 ? strcpy(action, "buy") : strcpy(action, "sell");
+        int price = sel_itm->price;
+        char txt[100] = "Huh? You're too broke for that item!";
+        char *name = strdup(sel_itm->name);
+        Color_from_index((int)sel_itm->rar, &name);
+        name[10] = '\0';
+        if ((game->currencies[0].amount >= price && page == 0) || page == 1) sprintf(txt, "%s %s for %d$ ?", action, name, sel_itm->price);
+        char *box = init_blank_canv(get_width(txt) + 4, 5, 1, '#');
+        write_on_canv(txt, box, 2, 2);
+        write_on_canv(box, window, wind_width / 2 - get_width(box) / 2, wind_height / 2 - get_height(box) / 2);
+        write_on_canv(window, canv, wind_x, wind_y);
+        render_canvas(canv, game, 0);
+        free(box), free(name);
+        int np = -1;
+        if ((game->currencies[0].amount < price && page == 0)) {
+          usleep(500000);
+          np = '?';
+        }
+        while (np == -1)
+          np = getchar();
+
+        if (is_in_string(inp, "wasd")) play_sound(AU_click1, 0);
+        if (inp == 'q') play_sound(AU_high_pitch, 0);
+        if (inp == ' ') play_sound(AU_change_sel, 0);
+
+        if (np == ' ') {
+          if (page == 0) {
+            int dupl = (Get_duplicate_index(*sel_itm, game->itm_ownd, items_OWNED_BUFFER - 1));
+            if (dupl)
+              game->itm_ownd[dupl].am++;
+            else
+              Copy_Item(&game->itm_ownd[game->owned_amnt], *sel_itm);
+            game->currencies[0].amount -= sel_itm->price;
+            game->owned_amnt++;
+            sel_itm->am--;
+          }
+          if (page == 1) {
+            game->currencies[0].amount += sel_itm->price / 2;
+            for (int x = 0; x < game->owned_amnt; x++) {
+              ITEM *itm = &game->itm_ownd[x];
+              if (itm->name == sel_itm->name) itm->am--;
+            }
+          }
+        }
       }
-      usleep(50000);
     }
-    free(window), free(interior);
+
+    if (inp == 'q' && sel >= 0) {
+      inp = '?';
+      sel = -1 - page;
+    }
+
+    usleep(50000);
+    if (window != NULL) free(window);
+    if (interior != NULL) free(interior);
   }
+  // reorder_list(game->itm_ownd, items_OWNED_BUFFER - 1);
+  // reorder_list(seller->items, SHOP_INVENTORY - 1);
   return 1;
 }
-
 int set_plr_death(char *canv, GAME game, SHIP plr) {
   plr.hp = 0;
   int x_size = CANV_X_CENTER, y_size = CANV_Y_CENTER;

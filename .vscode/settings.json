@@ -37,6 +37,8 @@
         "select.h": "c",
         "*.clang-format": "c",
         "sstream": "c",
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "unistd.h": "c",
+        "stdio.h": "c"
     }
 }

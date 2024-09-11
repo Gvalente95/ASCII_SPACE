@@ -118,7 +118,8 @@ int get_index(char *canv, int x_pos, int y_pos) {
 
 void reset_item(ITEM *itm) {
   itm->x_pos = itm->y_pos = itm->center_x = itm->center_y = -1;
-  itm->am = itm->price = itm->dur = 0;
+  itm->price = itm->dur = 0;
+  itm->am = 1;
   itm->type = ITEM_Type_COUNT;
   for (int x = 0; x < Effect_COUNT; x++)
     itm->effect[x].name[0] = '\0';
@@ -204,31 +205,55 @@ void tile_canvas(char *canv, int width, int tile_size) {
 }
 
 void Copy_Item(ITEM *to, ITEM from) {
-  strcpy(to->name, from.name);
-  strcpy(to->desc, from.desc);
+  strncpy(to->name, from.name, sizeof(to->name) - 1);
+  to->name[sizeof(to->name) - 1] = '\0';
+  strncpy(to->desc, from.desc, sizeof(to->desc) - 1);
+  to->desc[sizeof(to->desc) - 1] = '\0';
   to->content = from.content;
   to->dur = from.dur;
   to->price = from.price, to->rar = from.rar, to->type = from.type;
-  to->x_pos = to->y_pos = -1;
-  to->am = 0;
+  to->am = from.am;
 }
 int is_same_item(ITEM a, ITEM b) { return (a.content == b.content && a.name == b.name ? 1 : 0); }
-int Contains_item(ITEM a, ITEM *items, int size) {
+int Get_duplicate_index(ITEM a, ITEM *items, int size) {
   if (size == 0) return (0);
   for (int i = 0; i < size; i++) {
-    if (is_same_item(a, items[i])) return (1);
+    if (is_same_item(a, items[i])) return (i);
   }
-  return (0);
+  return (-1);
 }
+
 void Generate_items(ITEM *list, NPC *n, int amount, int list_size) {
   n->items = malloc(sizeof(ITEM) * amount);
+  if (!n->items) return;
+
   for (int i = 0; i < amount; i++) {
     ITEM new_item;
-    do {
-      Copy_Item(&new_item, list[rand_range(0, list_size)]);
-    } while (Contains_item(new_item, n->items, i));
-    new_item.am = 1;
-    Copy_Item(&n->items[i], new_item);
+    Copy_Item(&new_item, list[rand_range(0, list_size - 1)]);
+    int is_dupl = (i > 0) ? Get_duplicate_index(new_item, n->items, i) : -1;
+    if (is_dupl != -1) {
+      n->items[is_dupl].am++;
+    } else {
+      new_item.am = 1;
+      Copy_Item(&n->items[i], new_item);
+    }
+  }
+}
+
+void reorder_list(ITEM *list, int max_size) {
+  int next_fill = 0; // Index to place the next non-empty item
+
+  for (int i = 0; i < max_size; i++) {
+    if (list[i].content == '\0') {
+      if (i != next_fill) {
+        Copy_Item(&list[next_fill], list[i]);
+        reset_item(&list[i]);
+      }
+      next_fill++;
+    }
+  }
+  for (int j = next_fill; j < max_size; j++) {
+    reset_item(&list[j]);
   }
 }
 

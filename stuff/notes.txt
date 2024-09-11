@@ -25,3 +25,108 @@ typedef struct {
   int value, dur;
   Target_Type target;
 } EFFECT;
+
+
+
+// TEST ITEM DOWNLOAD
+for (int i = 0; i < game.num_items; i++) {
+    ITEM it = game.itm_list[i];
+    char *type = strdup(itm_types[it.type > ITEM_Type_COUNT ? ITEM_Type_COUNT : it.type]);
+    char *rar = strdup(rarity_types_lb[it.rar > RARITY_COUNT ? RARITY_COUNT : it.rar]);
+    printf("%s\n%c\nprc:%d\ntyp:%s\nrar:%s\n\n", it.name, it.content, it.price, type, rar);
+    free(type), free(rar);
+  }
+  printf("%d", game.num_items);
+  int inp = -1;
+  while (inp == -1)
+    inp = getchar();
+
+
+// TEST WRITE_ON_CANV
+  /*
+  while (1) {
+    char *test = init_blank_canv(50, 25, 3, ' ');
+    char *inside = init_blank_canv(25, 20, 3, '.');
+    if (width > 0) { inside = set_new_width(inside, get_width(inside) - width); }
+    char *ver = init_blank_canv(3, 7, 3, 'u');
+    write_on_canv(ver, inside, get_width(inside) / 2, get_height(inside) / 2);
+
+    int u = 0;
+    while (inside[u]) {
+      if (inside[u + 1] == '\0') inside[u] = 'o';
+      if (inside[u] == '\n') inside[u - 1] = 'n';
+      u++;
+    }
+
+    int canv_w = get_width(test) - 1, canv_h = get_height(test) - 1;
+
+    np = getchar();
+    if (np != -1 || is_pausing) {
+      if (is_in_string(np, "wasd")) is_pausing = 1;
+      while (np == -1)
+        np = getchar();
+      x_p += np == 'd' ? 1 : np == 'a' ? -1 : 0;
+      y_p += np == 'w' ? -1 : np == 's' ? 1 : 0;
+      if (np == 'q') return 0;
+      if (np == 'c') is_pausing = 0;
+      np = -1;
+    } else
+      x_p++;
+    if (x_p > canv_w) {
+      x_p = -get_width(inside);
+      y_p++;
+    }
+    if (x_p < -get_width(inside) - 1) x_p = 50;
+    if (y_p > canv_h) y_p = -get_height(inside);
+    if (y_p < -get_height(inside)) y_p = canv_h;
+    // inside = fit_in_right(test, inside, x_p, y_p);
+    char *new_ver = write_on_canv(inside, test, x_p, y_p);
+    system("clear");
+    int i = 0;
+    while (test[i])
+      printf("%c", test[i++]);
+    printf("\n\n");
+    if (new_ver) {
+      i = 0;
+      while (new_ver[i]) {
+        printf("%c", new_ver[i + 1] == '\n' ? 'n' : new_ver[i]);
+        i++;
+      }
+    }
+
+    usleep(900);
+    free(test), free(inside);
+  }
+  return 0;
+  */
+
+  int i = 5;
+  while (0) {
+    i++;
+    int v = getchar();
+    if (v == 'q') return 0;
+    char *base = strdup("|123456789|\n|abcdefghi|\n|^>.-:_=!;|\n");
+    char *text = strdup(base);
+    if (i > strlen(text)) i = 0;
+    system("clear");
+    int u = 0;
+    while (text[u])
+      printf("%c", text[u++]);
+    free(text), text = strdup(base);
+    printf("\nRIGHT: \n");
+    swap_line(text, i, right);
+    u = 0;
+    while (text[u])
+      printf("%c", text[u++]);
+    free(text), text = strdup(base);
+
+    printf("\n\nMIRROR: \n");
+    mirror_txt(text, i, right);
+    u = 0;
+    while (text[u])
+      printf("%c", text[u++]);
+
+    free(text), text = strdup(base);
+    usleep(50000);
+    printf("\n\n%d\n", i);
+  }
