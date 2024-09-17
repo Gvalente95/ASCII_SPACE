@@ -1,26 +1,26 @@
-# Base path to frameworks
-FRAMEWORK_PATH = /Library/Frameworks
-
-# SDL2 Framework path
-SDL2_FRAMEWORK_PATH = $(FRAMEWORK_PATH)/SDL2.framework
+# PATH TO THE SDL2_FRAMEWORK
+SDL2_PATH = $(shell brew --prefix sdl2)
+EXT_PATH = $(shell brew --prefix sdl2_ttf)
 
 # Compiler
 CC = cc
 
 # Source files in the c_files directory
-SRCS = $(wildcard c_files/*.c)
+SRCS = $(shell find c_files -name "*.c")
 
 # Output executable
 TARGET = a.out
 
-# Compiler flags
-CFLAGS = -I$(SDL2_FRAMEWORK_PATH)/Headers
+# Compiler flags (Include headers from both SDL2 and Ext path)
+CFLAGS = -I$(SDL2_PATH)/include/SDL2 \
+         -I$(EXT_PATH)/include
 
 DEBUG = -fsanitize=address -g
 
-# Linker flags
-LDFLAGS = -F$(FRAMEWORK_PATH) -framework SDL2 \
-          -Wl,-rpath,$(FRAMEWORK_PATH)
+# Linker flags (Link libraries instead of frameworks)
+LDFLAGS = -L$(SDL2_PATH)/lib -L$(EXT_PATH)/lib \
+          -lSDL2 -lSDL2_ttf \
+          -Wl,-rpath,$(SDL2_PATH)/lib -Wl,-rpath,$(EXT_PATH)/lib
 
 # Build rule
 $(TARGET): $(SRCS)

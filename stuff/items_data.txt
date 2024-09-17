@@ -1,3 +1,7 @@
+StarNova 3000
+The cheapest ship money can buy, can handle basic tasks.
+rar 0(CMN) prc -1 dur 0 type 5(ship)
+
 Star Medal
 A shimmering medal awarded for bravery. Increases your score by a significant amount.
 rar 2(RARE) prc 201 dur 0 type 4(exp)
@@ -26,7 +30,7 @@ Plasma Blaster
 An advanced upgrade that replaces standard bullets with plasma bolts.
 & rar 2(RARE) prc 350 dur 5 type 2(weap)
 
-Lucky Charm
+lucky Charm
 An ancient charm that enhances your luck, increasing the chance of loot drops.
 $ rar 2(RARE) prc 220 dur 6 type 4(exp)
 
@@ -135,15 +139,15 @@ A shield that disperses energy attacks, reducing damage taken.
 $ rar 5(MYSTIC) prc 8000 dur 17 type 3(armor)
 
 Quantum Saber
-A saber that bends space-time, allowing the wielder to attack faster.
+A saber that bends space-, allowing the wielder to attack faster.
 % rar 5(MYSTIC) prc 8000 dur 16 type 2(weap)
 
 Meteor Hammer
 A heavy hammer forged from meteorite, deals area damage on impact.
 k rar 5(MYSTIC) prc 5000 dur 16 type 2(weap)
 
-Starforged Armor
-Armor made from star materials, providing superior defense against projectiles.
+Starforged armor
+armor made from star materials, providing superior defense against projectiles.
 rar 5(MYSTIC) prc 8000 dur 17 type 3(armor)
 
 Arcane Gauntlets
@@ -163,7 +167,7 @@ A cloak made of Etherium Dust, enhances stealth and magic resistance.
 rar 5(MYSTIC) prc 9000 dur 17 type 3(armor)
 
 Bio-OrganExosuit
-An adaptive exosuit that repairs itself and its wearer over time.
+An adaptive exosuit that repairs itself and its wearer over .
 rar 5(MYSTIC) prc 6000 dur 17 type 3(armor)
 
 Gravity Maul
@@ -171,11 +175,11 @@ A warhammer that can temporarily increase its mass to crush foes.
 = rar 5(MYSTIC) prc 7000 dur 16 type 2(weap)
 
 Chrono Rifle
-A rifle that fires beams of concentrated time, slowing down targets.
+A rifle that fires beams of concentrated , slowing down targets.
 : rar 5(MYSTIC) prc 5000 dur 16 type 2(weap)
 
-Celestial Armor
-Armor blessed by celestial beings, granting protection and healing.
+Celestial armor
+armor blessed by celestial beings, granting protection and healing.
 ; rar 5(MYSTIC) prc 9000 dur 17 type 3(armor)
 
 Dark Matter Scythe
@@ -198,7 +202,7 @@ Shop Warper
 An engine that lets you warp to the nearest shop.
 / rar 3(ARTIF) prc 3000 dur 12 type 4(exp)
 
-Armory Warper
+armory Warper
 An engine that lets you warp to the nearest armory.
 \ rar 3(ARTIF) prc 3000 dur 12 type 4(exp)
 
@@ -241,3 +245,191 @@ A bunch of steel.
 Astro powder
 A bunch of powder from an asteroid.
 rar 0(CMN) prc 25 dur 15 type 1(mat)
+
+Warped Metal Fragment
+A piece of metal, warped by the intense heat of a star explosion.
+rar 1(UNCMN) prc 100 dur 15 type 6(quest)
+
+Quantum Gear
+An advanced mechanical part used in the construction of warp drives.
+rar 2(RARE) prc 300 dur 10 type 6(quest)
+
+Cosmic Scrap
+Junk from a broken space freighter, still valuable to collectors.
+rar 0(CMN) prc 50 dur 5 type 6(quest)
+
+Nebula Shard
+A mysterious shard collected from the remnants of a collapsed nebula.
+rar 3(ARTIF) prc 800 dur 12 type 6(quest)
+
+Asteroid Dust
+Fine dust gathered from asteroid fields, used in crafting.
+rar 0(CMN) prc 20 dur 15 type 6(quest)
+
+Dark Matter Core
+A rare core used in dark energy experiments, highly unstable.
+rar 4(DIVINE) prc 3000 dur 15 type 6(quest)
+
+Solar Panel Piece
+A broken piece of a solar panel from an ancient satellite.
+rar 0(CMN) prc 60 dur 12 type 6(quest)
+
+Ion Drive Component
+An essential part for repairing ion propulsion systems.
+rar 1(UNCMN) prc 120 dur 10 type 6(quest)
+
+Photon Emitter
+A device that emits focused photon beams, used in advanced technologies.
+rar 2(RARE) prc 400 dur 8 type 6(quest)
+
+Plasma Containment Unit
+A unit used to store plasma energy safely during space travel.
+rar 2(RARE) prc 500 dur 7 type 6(quest)
+
+Celestial Amulet
+A mystical amulet said to be blessed by celestial beings.
+rar 3(ARTIF) prc 1000 dur 12 type 6(quest)
+
+Meteor Fragment
+A chunk of meteor rock, dense and valuable to traders.
+rar 1(UNCMN) prc 150 dur 15 type 6(quest)
+
+Broken Thruster
+A malfunctioning thruster part salvaged from a derelict ship.
+rar 0(CMN) prc 80 dur 8 type 6(quest)
+
+Alien Relic
+An ancient relic believed to be from an unknown alien civilization.
+rar 4(DIVINE) prc 5000 dur 15 type 6(quest)
+
+Cracked Energy Cell
+An unstable energy cell used in outdated space tech.
+rar 0(CMN) prc 40 dur 7 type 6(quest)
+
+Wormhole Generator Part
+A component used to stabilize wormholes for safer travel.
+rar 3(ARTIF) prc 1200 dur 13 type 6(quest)
+
+Starship Hull Fragment
+A fragment of a starship's hull, still strong despite its age.
+rar 0(CMN) prc 30 dur 15 type 6(quest)
+
+Plasma Conduit
+A conduit used to channel plasma energy in advanced weapons.
+rar 2(RARE) prc 300 dur 12 type 6(quest)
+
+Stellar Compass
+A device that points the way to distant stars, used by explorers.
+rar 1(UNCMN) prc 200 dur 10 type 6(quest)
+
+Alien Data Chip
+A mysterious chip containing unknown data from alien civilizations.
+rar 3(ARTIF) prc 1500 dur 15 type 6(quest)
+
+Asteroid Core Sample
+A sample taken from the core of an asteroid, valuable for research.
+rar 1(UNCMN) prc 100 dur 15 type 6(quest)
+
+Void Crystal
+A crystal formed in the deepest voids of space, used in energy experiments.
+rar 4(DIVINE) prc 4000 dur 15 type 6(quest)
+
+Ancient Space Map
+A map from an ancient civilization, detailing long-lost trade routes.
+rar 3(ARTIF) prc 1200 dur 10 type 6(quest)
+
+Space Jelly
+A rare gelatinous substance found floating in deep space.
+rar 2(RARE) prc 220 dur 12 type 6(quest)
+
+Warp Coil
+A crucial part for activating warp drives, needed for long-distance travel.
+rar 2(RARE) prc 350 dur 11 type 6(quest)
+
+Frozen Nebula Gas
+A canister of gas harvested from a nebula, frozen for easy storage.
+rar 2(RARE) prc 300 dur 9 type 6(quest)
+
+Damaged Navigation System
+A broken navigation system part, useful for repairs.
+rar 0(CMN) prc 60 dur 7 type 6(quest)
+
+Ancient Star Chart
+A chart showing star positions from a long-lost civilization.
+rar 4(DIVINE) prc 3500 dur 15 type 6(quest)
+
+Rusty Starship Cog
+A rusty cog from an old starship, still functional with some work.
+rar 0(CMN) prc 20 dur 5 type 6(quest)
+
+Quantum Stabilizer
+A device that helps stabilize quantum energy fields.
+rar 3(ARTIF) prc 1000 dur 10 type 6(quest)
+
+Broken Antenna
+A damaged antenna, often salvaged from wrecked space stations.
+rar 0(CMN) prc 30 dur 5 type 6(quest)
+
+Galactic Artifact
+A priceless artifact from an ancient galactic empire.
+rar 4(DIVINE) prc 5000 dur 12 type 6(quest)
+
+Space Rock Chunk
+A chunk of rock collected from the surface of a distant planet.
+rar 0(CMN) prc 50 dur 10 type 6(quest)
+
+Alien Technology Fragment
+A piece of alien technology, mysterious and highly valuable.
+rar 3(ARTIF) prc 2000 dur 12 type 6(quest)
+
+Frozen Space Debris
+Debris from a derelict ship, frozen in the vacuum of space.
+rar 1(UNCMN) prc 150 dur 8 type 6(quest)
+
+Lost Data Disk
+A data disk containing valuable information from a lost space expedition.
+rar 2(RARE) prc 400 dur 9 type 6(quest)
+
+Damaged Reactor Core
+A damaged core from a starship's reactor, unstable but useful.
+rar 2(RARE) prc 500 dur 12 type 6(quest)
+
+Stellar Relic
+A relic from the dawn of the galaxy, highly sought after by collectors.
+rar 3(ARTIF) prc 1200 dur 10 type 6(quest)
+
+Unstable Plasma Core
+A core containing unstable plasma, used in experimental technologies.
+rar 2(RARE) prc 300 dur 8 type 6(quest)
+
+Warped Star Crystal
+A crystal that has been warped by the gravitational forces of a black hole.
+rar 3(ARTIF) prc 1400 dur 15 type 6(quest)
+
+Depleted Fuel Rod
+A rod used in starship reactors, now depleted of energy.
+rar 0(CMN) prc 60 dur 10 type 6(quest)
+
+Celestial Fragment
+A fragment of a celestial body, highly valuable to researchers.
+rar 4(DIVINE) prc 3500 dur 15 type 6(quest)
+
+Ancient Engine Part
+A part from an ancient engine, still functional with proper repairs.
+rar 2(RARE) prc 250 dur 12 type 6(quest)
+
+Plasma Shield Emitter
+A device that generates a plasma shield, useful for starship defenses.
+rar 3(ARTIF) prc 800 dur 10 type 6(quest)
+
+Ionized Space Rock
+A space rock charged with ion particles, valuable in crafting.
+rar 1(UNCMN) prc 100 dur 15 type 6(quest)
+
+Exotic Alloy
+A rare alloy found only in the deepest parts of space, used in high-end ship construction.
+rar 3(ARTIF) prc 1800 dur 15 type 6(quest)
+
+Displaced Energy Core
+A mysterious core displaced from its timeline, highly unstable.
+rar 4(DIVINE) prc 5000 dur 15 type 6(quest)

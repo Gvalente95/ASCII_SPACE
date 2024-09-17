@@ -1,0 +1,218 @@
+   __  
+  |==| 
+ /    \\ 
+/______\\ 
+Alien Fighter
+This alien is quick and deadly.
+It is known to appear out of nowhere, attack fiercely, and retreat.
+maxHP: 100 maxSpd: 5 shield: 0 weap: 2 atk_spd: 10 atk_pow: 20 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 5
+
+   ____   
+  /    \\  
+ /______\\ 
+ \\      / 
+Space Worm
+A slow-moving creature from deep space.
+Despite its size, it can burrow underground and surprise enemies.
+maxHP: 50 maxSpd: 2 shield: 1 weap: 1 atk_spd: 15 atk_pow: 5 atk_am: 3
+death_timer: 0 hurt_timer: 0 atk_reload: 7
+
+  ~~~~~~~~ 
+   ~~~~~~  
+Cosmic Serpent
+A snake-like entity born from the stars.
+It weaves through the cosmic winds with deadly precision.
+maxHP: 150 maxSpd: 8 shield: 3 weap: 4 atk_spd: 12 atk_pow: 30 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 6
+
+    ,--.   
+  / o   `\ 
+ (   .-. | 
+  \\ |  |/
+   `--'  
+Nebula Reaver
+A reaver that hunts in the darkest parts of space.
+Its glowing eyes can paralyze its enemies before the final blow.
+maxHP: 120 maxSpd: 4 shield: 2 weap: 3 atk_spd: 11 atk_pow: 25 atk_am: 2
+death_timer: 0 hurt_timer: 0 atk_reload: 4
+
+  \\ \\ | / / 
+  --(o)--  
+  /_/|_\\_\\ 
+Solar Predator
+A creature that lives close to suns, drawing energy from their heat.
+It moves with blinding speed when enraged.
+maxHP: 80 maxSpd: 10 shield: 0 weap: 3 atk_spd: 7 atk_pow: 40 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 3
+
+
+  |[][]|   
+  |    |   
+  |[][]|
+Dark Matter Golem
+Born from collapsed stars, its body is dense and nearly indestructible.
+This golem moves slowly but can endure incredible damage.
+maxHP: 300 maxSpd: 1 shield: 5 weap: 5 atk_spd: 20 atk_pow: 50 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 10
+
+   __     __ 
+   \ \   / / 
+    >_O_/    
+   /_/ \\_\\   
+Asteroid Drake
+An ancient drake that uses asteroids as cover.
+It emerges to strike, then returns to the safety of its rocky environment.
+maxHP: 200 maxSpd: 4 shield: 2 weap: 4 atk_spd: 10 atk_pow: 35 atk_am: 2
+death_timer: 0 hurt_timer: 0 atk_reload: 5
+
+   _______ 
+  ( 0   0 )
+  \\  ---  /
+   ------- 
+Void Stalker
+A creature that exists partially in another dimension.
+It can phase in and out of existence, making it hard to track.
+maxHP: 90 maxSpd: 7 shield: 1 weap: 3 atk_spd: 9 atk_pow: 15 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 4
+
+     ____  
+   /      \\ 
+  |  ( )   |
+   \______/ 
+Plasma Leviathan
+A massive creature that emits plasma waves.
+It can devastate large areas with its energy surges.
+maxHP: 250 maxSpd: 3 shield: 4 weap: 5 atk_spd: 12 atk_pow: 45 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 6
+
+   __[]   
+  [    ]  
+  [____]  
+Quasar Knight
+An ancient guardian of the Quasar Gate.
+Its energy shield reflects any form of attack.
+maxHP: 180 maxSpd: 6 shield: 3 weap: 4 atk_spd: 8 atk_pow: 20 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 4
+
+   .---.   
+  /     \\    
+  '-'-'-'   
+Radiant Scout
+A quick and agile scout that relies on hit-and-run tactics.
+It is usually seen scanning planets for resources.
+maxHP: 70 maxSpd: 9 shield: 0 weap: 1 atk_spd: 10 atk_pow: 10 atk_am: 2
+death_timer: 0 hurt_timer: 0 atk_reload: 3
+
+   (     )   
+   /     \\  
+  (   ^   )  
+   \     /  
+Comet Phantom
+An elusive being that follows the trail of comets.
+It strikes without warning, using the comet's tail as cover.
+maxHP: 60 maxSpd: 8 shield: 0 weap: 2 atk_spd: 9 atk_pow: 25 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 5
+
+     ___   
+    |   |  
+    |___|  
+Star Forge Guardian
+A protector created in the heart of a star forge.
+It wields immense power and defends the forge with zeal.
+maxHP: 220 maxSpd: 5 shield: 4 weap: 5 atk_spd: 10 atk_pow: 40 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 6
+
+    .___.   
+   /     \  
+   | ( ) |  
+   \_____/  
+Galactic Marauder
+A space pirate known for raiding planets and GLB_ships alike.
+Its attacks are fast and relentless.
+maxHP: 100 maxSpd: 7 shield: 1 weap: 3 atk_spd: 10 atk_pow: 20 atk_am: 2
+death_timer: 0 hurt_timer: 0 atk_reload: 4
+
+   .-. .-.   
+  /     \    
+  '-'-'-'   
+Wormhole Devourer
+A creature that consumes matter around wormholes.
+It warps space as it moves, confusing its prey.
+maxHP: 140 maxSpd: 6 shield: 2 weap: 3 atk_spd: 11 atk_pow: 25 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 5
+
+   (     )   
+   /     \  
+  (   ^   )  
+   \     /  
+Astro Lurker
+A predator that hides in asteroid belts, waiting for its prey.
+Its claws can tear through even the toughest materials.
+maxHP: 160 maxSpd: 5 shield: 1 weap: 4 atk_spd: 12 atk_pow: 30 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 6
+
+     ___   
+    |   |  
+    |___|  
+Interstellar Wraith
+A ghostly figure seen traveling between stars.
+It is believed to be a lost soul seeking revenge.
+maxHP: 90 maxSpd: 8 shield: 0 weap: 2 atk_spd: 9 atk_pow: 15 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 4
+
+    .___.   
+   /     \  
+   | ( ) |  
+   \_____/  
+Chrono Beast
+A beast that manipulates time around it.
+It can slow its enemies or speed itself up in combat.
+maxHP: 130 maxSpd: 6 shield: 2 weap: 4 atk_spd: 11 atk_pow: 25 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 5
+
+  /---\   
+ |     |  
+ |     |  
+  \---/   
+Exo Soldier
+An engineered soldier with advanced exoskeleton GLB_armor.
+Its precision attacks and quick reloads make it deadly in battle.
+maxHP: 110 maxSpd: 7 shield: 3 weap: 3 atk_spd: 10 atk_pow: 25 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 3
+
+   <---<   
+   \___/  
+Black Hole Sentinel
+A creature that guards the edges of black holes.
+Its presence warps reality, making it a dangerous foe.
+maxHP: 200 maxSpd: 4 shield: 4 weap: 5 atk_spd: 12 atk_pow: 35 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 6
+
+   ^   ^  
+  /     \  
+ |  ---  |
+  \_____/
+Interstellar Wraith
+A ghostly figure traveling between stars, seeking revenge.
+good
+maxHP: 90 maxSpd: 8 shield: 0 weap: 2 atk_spd: 9 atk_pow: 15 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 4
+
+    .-.
+   (o o)  
+    | |
+   (___)
+Chrono Beast
+A beast that manipulates time, either speeding itself or slowing enemies.
+maxHP: 130 maxSpd: 6 shield: 2 weap: 4 atk_spd: 11 atk_pow: 25 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 5
+
+
+    [^]   
+   /   \  
+  [_____] 
+Exo Soldier
+An engineered soldier with exoskeleton GLB_armor, precise and deadly.
+maxHP: 110 maxSpd: 7 shield: 3 weap: 3 atk_spd: 10 atk_pow: 25 atk_am: 1
+death_timer: 0 hurt_timer: 0 atk_reload: 3

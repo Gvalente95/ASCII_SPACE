@@ -1,57 +1,88 @@
-#include "../headers/includes.h"
+#include "../../headers/1_includes.h"
 
-BOSS_ACTIONS SET_RAND_STATE(GAME *game, BOSS *boss, int hp_perc);
+// BOSS FIGHT
+void CHANGE_ACTION(BOSS *boss, SHIP *plr, int hp_perc);
+void IDLE(BOSS *boss, SHIP *plr);
+void ATK0(BOSS *boss, SHIP *plr);
+void ATK1(BOSS *boss, SHIP *plr, int hp_perc);
+void ATK2(BOSS *boss, SHIP *plr, int hp_perc);
+void SP_ATTACK(BOSS *boss, SHIP *plr);
+void SP_ATK2(BOSS *boss, SHIP *plr);
+void CALL(BOSS *boss, SHIP *plr);
+void HURT(BOSS *boss, SHIP *plr);
+void SHIELD(BOSS *boss, SHIP *plr);
+void RETREAT(char *canv, BOSS *boss, SHIP *plr);
+int HANDLE_HEALTH(BOSS *boss, int hp_perc);
+void DEATH(BOSS *boss);
+void REPOSITION(BOSS *boss, SHIP *plr);
+void ENTRANCE(BOSS *boss, SHIP *plr);
+void RENDER_BOSS(BOSS *boss, char *boss_content, char *canv);
+void HANDLE_CONSTANTS(BOSS *boss, int hp_perc);
 
-int upd_boss_fight(char *canv, GAME *game, BOSS *boss, SHIP *mobs, PROJ *mobprj, ITEM *items, SHIP *plr, int time) {
-  (void)items;
+BOSS_ACTIONS SET_RAND_STATE(BOSS *boss, int hp_perc);
 
-  if (game->g_st != boss_fight) {
-    if (time % BOSS_SPWNTIME >= BOSS_SPWNTIME - 100 && time % BOSS_SPWNTIME < BOSS_SPWNTIME) {
+// BOSS
+const int BOSS_ATK0_DUR = 600;
+const int BOSS_ATK1_DUR = 50;
+const int BOSS_ATK2_DUR = 600;
+const int BOSS_HURT_DUR = 50;
+const int BOSS_REGEN_DUR = 200;
+const int BOSS_REPOS_DUR = 200;
+const int BOSS_SP_ATK_DUR = 600;
+const int BOSS_SP2_ATK_DUR = 150;
+const int BOSS_RETREAT_DUR = 250;
+const int BOSS_SHIELD_DUR = 200;
+
+int upd_boss_fight(char *canv, BOSS *boss, SHIP *plr) {
+
+  if (GLB_game_state != boss_fight) {
+    if (GLB_time % BOSS_SPWNTIME >= BOSS_SPWNTIME - 100 && GLB_time % BOSS_SPWNTIME < BOSS_SPWNTIME) {
       int dng_x = 20, dng_y = 5;
-      game->mv_type = cutscene;
-      game->allowed_dir = up, game->allowed_lk_dir = up, plr->dir = up, plr->lk_dir = up;
+      GLB_mv_typ = cutscene;
+      GLB_allowed_dir = up, GLB_allowed_lk_dir = up, plr->dir = up, plr->lk_dir = up;
       char *dng_msg = init_blank_canv(dng_x, dng_y, 1, '#');
       write_on_canv("DANGER !\n BOSS INCOMING", dng_msg, 3, 2);
       write_on_canv(dng_msg, canv, CANV_X_CENTER - dng_x / 2, CANV_Y_CENTER - dng_y / 2);
       free(dng_msg);
     }
-    if (time % BOSS_SPWNTIME == 0) init_boss(game, boss);
+
+    if (GLB_time % BOSS_SPWNTIME == 0) init_boss(boss);
     return 0;
   }
 
   char *boss_content = strdup(boss->content);
   int hp_perc = PERCENTILE(boss->cur_hp, boss->max_HP);
 
-  HANDLE_CONSTANTS(game, boss, plr, mobprj, time, hp_perc);
+  HANDLE_CONSTANTS(boss, hp_perc);
 
   //  CHANGE OF ACTION
-  if (boss->time_in_state <= 0) CHANGE_ACTION(game, boss, plr, hp_perc);
+  if (boss->time_in_state <= 0) CHANGE_ACTION(boss, plr, hp_perc);
   if (boss->action == die)
-    DEATH(game, boss, mobprj);
+    DEATH(boss);
   else if (boss->action == entrance)
-    ENTRANCE(game, boss, plr, time);
+    ENTRANCE(boss, plr);
   else if (boss->action == reposition)
-    REPOSITION(game, boss, plr, time);
+    REPOSITION(boss, plr);
   else if (boss->action == SP_attack)
-    SP_ATTACK(game, boss, plr, mobprj, time);
+    SP_ATTACK(boss, plr);
   else if (boss->action == SP_attack2)
-    SP_ATK2(game, boss, plr, time);
+    SP_ATK2(boss, plr);
   else if (boss->action == attack0)
-    ATK0(game, boss, plr, mobprj, time);
+    ATK0(boss, plr);
   else if (boss->action == attack)
-    ATK1(game, boss, plr, mobprj, time, hp_perc);
+    ATK1(boss, plr, hp_perc);
   else if (boss->action == attack2)
-    ATK2(game, boss, plr, mobprj, time, hp_perc);
+    ATK2(boss, plr, hp_perc);
   else if (boss->action == call)
-    CALL(game, boss, plr, mobs, time);
+    CALL(boss, plr);
   else if (boss->action == idle)
-    IDLE(game, boss, plr, time);
+    IDLE(boss, plr);
   else if (boss->action == hurt)
-    HURT(game, boss, plr, time);
+    HURT(boss, plr);
   else if (boss->action == shield)
-    SHIELD(game, boss, plr);
+    SHIELD(boss, plr);
   else if (boss->action == retreat)
-    plr->dir = none, RETREAT(canv, game, boss, plr, time);
+    plr->dir = none, RETREAT(canv, boss, plr);
 
   boss->time_in_state--;
   int has_losthp = HANDLE_HEALTH(boss, hp_perc);
@@ -67,43 +98,20 @@ int upd_boss_fight(char *canv, GAME *game, BOSS *boss, SHIP *mobs, PROJ *mobprj,
   return 1;
 }
 
-void HANDLE_CONSTANTS(GAME *game, BOSS *boss, SHIP *plr, PROJ *mobprj, int time, int hp_perc) {
-  (void)game, (void)plr, (void)mobprj, (void)time;
+void HANDLE_CONSTANTS(BOSS *boss, int hp_perc) {
   if (hp_perc == 40 || hp_perc == 60) {
     boss->next_action = hurt;
     boss->time_in_state = 0;
-    boss->hole_size -= boss->hole_size < SHIP_W + 2 ? 0 : 1;
+    boss->hole_size -= boss->hole_size < PLR_SHIP_W + 2 ? 0 : 1;
   } else if (hp_perc == 20) {
     boss->next_action = SP_attack;
     boss->time_in_state = 0;
-    boss->hole_size -= boss->hole_size < SHIP_W + 2 ? 0 : 1;
+    boss->hole_size -= boss->hole_size < PLR_SHIP_W + 2 ? 0 : 1;
   }
-
-  /*
-if (time % 20 == 0) {
-  for (int i = 0; i < PRJ_MOB_BUFFER; i++) {
-    if (mobprj[i].x_pos == -1 && mobprj[i].y_pos == -1) {
-      mobprj[i].x_pos = rand_range(boss->x_pos, boss->x_pos + boss->width + 1);
-      mobprj[i].y_pos = rand_range(boss->y_pos, boss->y_pos + boss->height + 1);
-      mobprj[i].dir = rand_range(1, 7);
-      if (mobprj[i].dir == none) mobprj[i].dir = left;
-      break;
-    }
-  }
-}*/
-  // handle PLR_DIR_SHIFT
-
-  /*
-    if (game->mv_type != on_grid && game->mv_type != free_slide) {
-      if (plr->dir == left || plr->dir == right) {
-        if (plr->dir == left && boss->x_pos <= CANV_W - boss->width / 2) boss->x_pos += 1;
-        if (plr->dir == right && boss->x_pos >= -boss->width / 2) boss->x_pos -= 1;
-      }
-    }*/
 }
 
-void CHANGE_ACTION(GAME *game, BOSS *boss, SHIP *plr, int hp_perc) {
-  game->mv_type = normal, game->atk_type = autom;
+void CHANGE_ACTION(BOSS *boss, SHIP *plr, int hp_perc) {
+  GLB_mv_typ = normal, GLB_atk_typ = autom;
   boss->x_dir = 1, boss->y_dir = 1;
   boss->hole_size = 0, boss->x_dir = 0, boss->speATK_hole = 0;
 
@@ -112,7 +120,7 @@ void CHANGE_ACTION(GAME *game, BOSS *boss, SHIP *plr, int hp_perc) {
   switch (boss->action) {
     case idle:
       boss->time_in_state = BOSS_ATK1_DUR;
-      boss->next_action = SET_RAND_STATE(game, boss, hp_perc);
+      boss->next_action = SET_RAND_STATE(boss, hp_perc);
       break;
     case hurt:
       boss->time_in_state = BOSS_HURT_DUR;
@@ -133,7 +141,7 @@ void CHANGE_ACTION(GAME *game, BOSS *boss, SHIP *plr, int hp_perc) {
     case attack2:
       boss->time_in_state = BOSS_ATK2_DUR;
       boss->next_action = idle;
-      game->mv_type = free_slide;
+      GLB_mv_typ = free_slide;
       boss->x_dir = rand() % 2 ? 1 : -1;
       boss->speATK_hole = boss->x_dir ? CANV_W - 50 : 50;
       break;
@@ -144,7 +152,7 @@ void CHANGE_ACTION(GAME *game, BOSS *boss, SHIP *plr, int hp_perc) {
     case SP_attack:
       boss->time_in_state = BOSS_SP_ATK_DUR;
       boss->next_action = reposition;
-      boss->speATK_hole = (plr->x_pos + SHIP_W / 2) + SHIP_W * rand_range(-10, 10);
+      boss->speATK_hole = (plr->x_pos + PLR_SHIP_W / 2) + PLR_SHIP_W * rand_range(-10, 10);
       break;
     case SP_attack2:
       boss->time_in_state = BOSS_SP2_ATK_DUR;
@@ -164,7 +172,7 @@ void CHANGE_ACTION(GAME *game, BOSS *boss, SHIP *plr, int hp_perc) {
   }
 }
 
-BOSS_ACTIONS SET_RAND_STATE(GAME *game, BOSS *boss, int hp_perc) {
+BOSS_ACTIONS SET_RAND_STATE(BOSS *boss, int hp_perc) {
   (void)game;
   if (boss->cur_hp == boss->max_HP / 10) return (regen);
   int r = rand() % 6;
@@ -175,21 +183,22 @@ BOSS_ACTIONS SET_RAND_STATE(GAME *game, BOSS *boss, int hp_perc) {
   return (attack);
 }
 
-void ENTRANCE(GAME *game, BOSS *boss, SHIP *plr, int time) {
-  game->boss_mode = 2;
-  game->mv_type = cutscene, game->allowed_dir = up, game->allowed_lk_dir = up, plr->dir = up, plr->lk_dir = up;
+void ENTRANCE(BOSS *boss, SHIP *plr) {
+  GLB_boss_mode = 2;
+  GLB_mv_typ = cutscene, GLB_allowed_dir = up, GLB_allowed_lk_dir = up, plr->dir = up, plr->lk_dir = up;
   boss->next_action = shield;
   if (boss->time_in_state <= 0) {
-    game->mv_type = watch_up;
-    game->boss_mode = 1;
+    GLB_mv_typ = watch_up;
+    GLB_boss_mode = 1;
   }
-  if (time % 5 == 0 && boss->y_pos < 12) boss->y_pos++;
+  if (GLB_time % 5 == 0 && boss->y_pos < 12) boss->y_pos++;
 }
 
-void DEATH(GAME *game, BOSS *boss, PROJ *mobprj) {
+void DEATH(BOSS *boss) {
   boss->x_pos += boss->x_pos < CENTER_X(boss->width) ? 1 : 0;
-  game->boss_mode = 2;
-  for (int i = 0; i < PRJ_MOB_BUFFER; i++) {
+  GLB_boss_mode = 2;
+  PROJ *mobprj = gmo.proj_mob;
+  for (int i = 0; i < PROJ_MOB_BUFF_SIZE; i++) {
     if (mobprj[i].x_pos == -1 && mobprj[i].y_pos == -1) {
       mobprj[i].x_pos = rand_range(boss->x_pos, boss->x_pos + boss->width + 1);
       mobprj[i].y_pos = rand_range(boss->y_pos, boss->y_pos + boss->height + 1);
@@ -199,16 +208,16 @@ void DEATH(GAME *game, BOSS *boss, PROJ *mobprj) {
     }
   }
   if (boss->time_in_state <= 1) {
-    game->mv_type = normal;
-    game->allowed_dir = all, game->allowed_lk_dir = all;
-    game->g_st = nm;
-    game->boss_mode = 0;
+    GLB_mv_typ = normal;
+    GLB_allowed_dir = all, GLB_allowed_lk_dir = all;
+    GLB_game_state = nm;
+    GLB_boss_mode = 0;
   }
 }
 
-void REPOSITION(GAME *game, BOSS *boss, SHIP *plr, int time) {
-  game->boss_mode = 2;
-  game->mv_type = cutscene, game->allowed_dir = all, game->allowed_lk_dir = all;
+void REPOSITION(BOSS *boss, SHIP *plr) {
+  GLB_boss_mode = 2;
+  GLB_mv_typ = cutscene, GLB_allowed_dir = all, GLB_allowed_lk_dir = all;
   plr->dir = none;
   int BOSS_CENTER_X = CANV_X_CENTER - boss->width / 2;
   int boss_is_set = boss->y_pos == BOSS_CENTER_Y && (boss->x_pos >= BOSS_CENTER_X - 3 && boss->x_pos < BOSS_CENTER_X + 3);
@@ -217,7 +226,7 @@ void REPOSITION(GAME *game, BOSS *boss, SHIP *plr, int time) {
   if (boss_is_set && plr_is_set)
     boss->time_in_state = 0;
 
-  else if (time % 5 == 0) {
+  else if (GLB_time % 5 == 0) {
     boss->x_dir = boss->x_pos < BOSS_CENTER_X ? 1 : boss->x_pos > BOSS_CENTER_X ? -1 : 0;
     boss->y_dir = boss->y_pos < 6 ? 1 : boss->y_pos > 12 ? -1 : 0;
     boss->y_pos += boss->y_pos > BOSS_CENTER_Y ? -1 : boss->y_pos < BOSS_CENTER_Y ? 1 : 0;
@@ -225,65 +234,55 @@ void REPOSITION(GAME *game, BOSS *boss, SHIP *plr, int time) {
   }
 }
 
-void IDLE(GAME *game, BOSS *boss, SHIP *plr, int time) {
-  game->mv_type = watch_up, game->atk_type = autom;
-  game->allowed_dir = hor_up, game->allowed_lk_dir = up, plr->lk_dir = up;
-  if (time % boss->speed == 0) {
+void IDLE(BOSS *boss, SHIP *plr) {
+  GLB_mv_typ = watch_up, GLB_atk_typ = autom;
+  GLB_allowed_dir = hor_up, GLB_allowed_lk_dir = up, plr->lk_dir = up;
+  if (GLB_time % boss->speed == 0) {
     boss->x_dir = boss->x_pos < 3 ? 1 : boss->x_pos + boss->width > CANV_W - 3 ? -1 : boss->x_dir;
     boss->y_dir = boss->y_pos < 6 ? 1 : boss->y_pos > 12 ? -1 : boss->y_dir;
     boss->x_pos += boss->x_dir, boss->y_pos += boss->y_dir;
   }
 }
 
-void ATK0(GAME *game, BOSS *boss, SHIP *plr, PROJ *mobprj, int time) {
-  game->mv_type = watch_up, game->atk_type = autom;
-  game->allowed_dir = hor_up, game->allowed_lk_dir = up, plr->lk_dir = up;
-  if (time % boss->atk_spd == 0) {
-    for (int i = 0; i < PRJ_MOB_BUFFER; i++) {
-      if (mobprj[i].x_pos == -1 && mobprj[i].y_pos == -1) {
-        mobprj[i].x_pos = rand_range(boss->x_pos, boss->x_pos + boss->width + 1);
-        mobprj[i].y_pos = rand_range(boss->y_pos, boss->y_pos + boss->height + 1);
-        mobprj[i].dir = down;
-        break;
-      }
-    }
-  }
+void ATK0(BOSS *boss, SHIP *plr) {
+  GLB_mv_typ = watch_up, GLB_atk_typ = autom;
+  GLB_allowed_dir = hor_up, GLB_allowed_lk_dir = up, plr->lk_dir = up;
+  if (GLB_time % boss->atk_spd == 0) Init_bullet(gmo.proj_mob, base, down, PROJ_MOB_BUFF_SIZE, boss->x_pos + (boss->width), boss->y_pos + boss->height + 1);
 }
 
-void ATK1(GAME *game, BOSS *boss, SHIP *plr, PROJ *mobprj, int time, int hp_perc) {
-  game->mv_type = watch_up, game->atk_type = autom;
-  game->allowed_dir = hor_up, game->allowed_lk_dir = up, plr->lk_dir = up;
-  if (time % boss->atk_spd == 0) {
+void ATK1(BOSS *boss, SHIP *plr, int hp_perc) {
+  GLB_mv_typ = watch_up, GLB_atk_typ = autom;
+  GLB_allowed_dir = hor_up, GLB_allowed_lk_dir = up, plr->lk_dir = up;
+  if (GLB_time % boss->atk_spd == 0) {
     int bul_amnt = rand_range(3, 16 - (hp_perc / 10));
     int avoid = rand_range(1, 5);
     int center = CENTER_X(boss->width) - (6 * bul_amnt);
-    for (int i = 0; i < PRJ_MOB_BUFFER; i++) {
+    PROJ *mobprj = gmo.proj_mob;
+    for (int i = 0; i < PROJ_MOB_BUFF_SIZE; i++) {
       if (mobprj[i].x_pos != -1 && mobprj[i].y_pos != -1) continue;
       if (i == avoid) {
         bul_amnt--;
         continue;
       }
-      mobprj[i].x_pos = center + (12 * bul_amnt);
-      mobprj[i].y_pos = boss->y_pos + boss->height + 1;
-      mobprj[i].dir = down;
+      Init_bullet(gmo.proj_mob, base, down, PROJ_MOB_BUFF_SIZE, center + (12 * bul_amnt), boss->y_pos + boss->height + 1);
+
       bul_amnt--;
       if (bul_amnt == 0) break;
     }
   }
 }
 
-void ATK2(GAME *game, BOSS *boss, SHIP *plr, PROJ *mobprj, int time, int hp_perc) {
-  (void)time;
-  game->mv_type = free_slide;
-  game->allowed_dir = hor, game->allowed_lk_dir = up, plr->lk_dir = up;
+void ATK2(BOSS *boss, SHIP *plr, int hp_perc) {
+  GLB_mv_typ = free_slide;
+  GLB_allowed_dir = hor, GLB_allowed_lk_dir = up, plr->lk_dir = up;
   int speed = 3;
-  int hole_size = (SHIP_W + 4) * 2;
+  int hole_size = (PLR_SHIP_W + 4) * 2;
   int prj_x = boss->x_pos + boss->width / 2;
   int l_reach = prj_x <= 0, r_reach = prj_x > CANV_W - 2;
   int min_hole_start = hole_size * 2, max_hole_start = CANV_W - hole_size * 2;
   if (prj_x >= boss->speATK_hole - speed && prj_x <= boss->speATK_hole + speed) boss->hole_size = hole_size;
   if (!boss->hole_size)
-    Init_bullet(mobprj, base, down, PRJ_MOB_BUFFER, prj_x, boss->y_pos + boss->height);
+    Init_bullet(gmo.proj_mob, base, down, PROJ_MOB_BUFF_SIZE, prj_x, boss->y_pos + boss->height);
   else
     boss->hole_size--;
 
@@ -300,21 +299,21 @@ void ATK2(GAME *game, BOSS *boss, SHIP *plr, PROJ *mobprj, int time, int hp_perc
   if (l_reach || r_reach) { boss->speATK_hole = rand_range(min_hole_start, max_hole_start); }
 }
 
-void SP_ATTACK(GAME *game, BOSS *boss, SHIP *plr, PROJ *mobprj, int time) {
+void SP_ATTACK(BOSS *boss, SHIP *plr) {
   int bul_amnt = CANV_X_CENTER;
-  game->mv_type = on_grid, game->atk_type = press;
-  game->allowed_dir = all, game->allowed_lk_dir = all;
+  GLB_mv_typ = on_grid, GLB_atk_typ = press;
+  GLB_allowed_dir = all, GLB_allowed_lk_dir = all;
 
   if (plr->y_pos <= boss->y_pos + boss->height + 1 && boss->time_in_state > 60) boss->time_in_state = 60;
-  if (boss->time_in_state >= 60 && time % (boss->atk_spd) == 0) {
+  if (boss->time_in_state >= 60 && GLB_time % (boss->atk_spd) == 0) {
     if (boss->time_in_state <= 100)
-      boss->x_dir = 0, boss->hole_size = SHIP_W + 2;
+      boss->x_dir = 0, boss->hole_size = PLR_SHIP_W + 2;
     else {
-      if (time % 5 == 0) {
+      if (GLB_time % 5 == 0) {
         int r_dir = rand() % 4;
         boss->x_dir = r_dir == 0 ? 1 : r_dir == 1 ? -1 : 0;
       }
-      boss->hole_size = boss->x_dir == 0 ? (SHIP_W + 3) : 3 * (SHIP_W + 1);
+      boss->hole_size = boss->x_dir == 0 ? (PLR_SHIP_W + 3) : 3 * (PLR_SHIP_W + 1);
       if (boss->speATK_hole < 10 || boss->speATK_hole > CANV_W - 10)
         boss->x_dir = boss->speATK_hole < 30 ? 1 : boss->speATK_hole > CANV_W - 30 ? -1 : boss->x_dir;
       else if (boss->speATK_hole > CANV_W - 30)
@@ -325,7 +324,8 @@ void SP_ATTACK(GAME *game, BOSS *boss, SHIP *plr, PROJ *mobprj, int time) {
 
     if (boss->time_in_state > 130) {
       int x_dist = (CANV_W) / bul_amnt;
-      for (int i = 0; i < PRJ_MOB_BUFFER; i++) {
+      PROJ *mobprj = gmo.proj_mob;
+      for (int i = 0; i < PROJ_MOB_BUFF_SIZE; i++) {
         if (mobprj[i].x_pos != -1 && mobprj[i].y_pos != -1) continue;
         if (boss->time_in_state == 50) {
           mobprj[i].x_pos = mobprj[i].y_pos = -1;
@@ -346,74 +346,75 @@ void SP_ATTACK(GAME *game, BOSS *boss, SHIP *plr, PROJ *mobprj, int time) {
   }
 }
 
-void SP_ATK2(GAME *game, BOSS *boss, SHIP *plr, int time) {
-  game->mv_type = on_grid, game->atk_type = disabled;
-  game->allowed_dir = down, game->allowed_lk_dir = down;
+void SP_ATK2(BOSS *boss, SHIP *plr) {
+  GLB_mv_typ = on_grid, GLB_atk_typ = disabled;
+  GLB_allowed_dir = down, GLB_allowed_lk_dir = down;
   int max_dist = 50;
   int y_dist = max_dist - abs(boss->y_pos - plr->y_pos);
   if (y_dist > 7) y_dist = 7;
   if (y_dist < 2) y_dist = 2;
 
-  if (time % y_dist == 0) {
+  if (GLB_time % y_dist == 0) {
     plr->y_pos--;
     boss->y_dir = boss->y_pos > CANV_H - boss->height - 10 ? -1 : boss->y_pos < CANV_H - boss->height - 25 ? 1 : boss->y_dir;
     boss->y_pos += boss->y_dir;
-    boss->x_pos = plr->x_pos + SHIP_W / 2 - boss->width / 2;
+    boss->x_pos = plr->x_pos + PLR_SHIP_W / 2 - boss->width / 2;
     if (abs(boss->y_pos - plr->y_pos) < 10) {
       if (!plr->hurt_timer) {
         if (plr->shield)
           plr->shield -= 10;
         else
           plr->hp -= 1;
-        game->plr_col_index = -2;
+        GLB_plr_col_index = -2;
         plr->hurt_timer = HURT_DUR;
       }
     }
   }
-  if (boss->y_pos > CANV_H - boss->height - SHIP_H - 6) boss->time_in_state = 0;
+  if (boss->y_pos > CANV_H - boss->height - PLR_SHIP_H - 6) boss->time_in_state = 0;
   if (boss->time_in_state == 0) plr->dir = up;
 }
 
-void CALL(GAME *game, BOSS *boss, SHIP *plr, SHIP *mobs, int time) {
-  (void)time, (void)plr;
-  game->mv_type = on_grid, game->atk_type = disabled;
-  game->allowed_dir = down, game->allowed_lk_dir = down;
+void CALL(BOSS *boss, SHIP *plr) {
+  (void)plr;
+  GLB_mv_typ = on_grid, GLB_atk_typ = disabled;
+  GLB_allowed_dir = down, GLB_allowed_lk_dir = down;
+  SHIP *mobs = gmo.mobs;
   for (int i = 0; i < MOBS_BUFFER; i++) {
     if (mobs[i].x_pos != -1 && mobs[i].y_pos != -1) continue;
-    mobs[i].x_pos = CANV_X_CENTER - SHIP_W / 2, mobs[i].y_pos = boss->y_pos + boss->height + 1;
+    mobs[i].x_pos = CANV_X_CENTER - PLR_SHIP_W / 2, mobs[i].y_pos = boss->y_pos + boss->height + 1;
     mobs[i].spd = 1, mobs[i].dir = down;
     break;
   }
 }
 
-void HURT(GAME *game, BOSS *boss, SHIP *plr, int time) {
+void HURT(BOSS *boss, SHIP *plr) {
   (void)plr;
-  game->mv_type = watch_up, game->atk_type = autom;
-  boss->x_dir = time % 2 == 0 ? -1 : 1;
-  boss->y_dir = time % 2 == 0 ? -1 : 1;
+  GLB_mv_typ = watch_up, GLB_atk_typ = autom;
+  boss->x_dir = GLB_time % 2 == 0 ? -1 : 1;
+  boss->y_dir = GLB_time % 2 == 0 ? -1 : 1;
   boss->x_pos += boss->x_dir;
   boss->y_pos += boss->y_dir;
 
-  if (time % 30 == 0 && boss->time_in_state > 50) {
+  if (GLB_time % 30 == 0 && boss->time_in_state > 50) {
     int ind = rand_range(1, strlen(boss->content) - 1);
     if (boss->content[ind] != '\n') boss->content[ind] = EXPL_START;
   }
 }
 
-void SHIELD(GAME *game, BOSS *boss, SHIP *plr) {
-  (void)game, (void)plr;
+void SHIELD(BOSS *boss, SHIP *plr) {
+  (void)(void)plr;
   boss->shield++;
   boss->time_in_state = 2;
   if (boss->shield == boss->max_shield) boss->time_in_state = 0;
 }
 
-void RETREAT(char *canv, GAME *game, BOSS *boss, SHIP *plr, int time) {
-  game->mv_type = on_grid, game->atk_type = press;
-  game->allowed_dir = all, game->allowed_lk_dir = all;
+void RETREAT(char *canv, BOSS *boss, SHIP *plr) {
+  GLB_mv_typ = on_grid, GLB_atk_typ = press;
+  GLB_allowed_dir = all, GLB_allowed_lk_dir = all;
   // HANDLE_COLISION
   if (abs(boss->x_pos - plr->x_pos) < 10 && abs(boss->y_pos - plr->y_pos) < 10) {
     if (!plr->hurt_timer) {
-      if (time % 10 == 0) {
+      if (GLB_time % 10 == 0) {
         if (plr->shield)
           plr->shield -= 10;
         else

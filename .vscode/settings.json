@@ -39,6 +39,7 @@
         "sstream": "c",
         "typeinfo": "c",
         "unistd.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "_types.h": "c"
     }
 }

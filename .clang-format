@@ -9,7 +9,7 @@ AllowShortIfStatementsOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: false
 
 PenaltyBreakBeforeFirstCallParameter: 1000
-ColumnLimit: 200
+ColumnLimit: 180
 PenaltyExcessCharacter: 1000
 
 # Additional settings

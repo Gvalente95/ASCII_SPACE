@@ -1,4 +1,4 @@
-#include "../headers/includes.h"
+#include "../../headers/1_includes.h"
 
 ITEM parse_item(char *line, int cur_line) {
   ITEM item;
@@ -9,8 +9,13 @@ ITEM parse_item(char *line, int cur_line) {
   if (cur_line <= 1) {
     if (line[0] == '\n')
       strcpy(cur_line == 0 ? item.name : item.desc, "undefined");
-    else
-      sscanf(line, "%[^\n]", cur_line == 0 ? item.name : item.desc);
+    else {
+      char *element = cur_line == 0 ? item.name : item.desc;
+      sscanf(line, "%[^\n]", element);
+      if (get_width(element) > CANV_W - 50) fit_text_to_width(element, CANV_W - 50);
+    }
+    int i = 0;
+
     return item;
   }
   if (cur_line == 2) {
@@ -31,14 +36,13 @@ ITEM parse_item(char *line, int cur_line) {
            &b->value); // value
     return item;
   }
-
   return item;
 }
 
 ITEM *read_items_from_file(const char *filename, int *num_items) {
   FILE *file = fopen(filename, "r");
   if (!file) {
-    perror("Failed to open file");
+    perror("Failed to open item file");
     *num_items = 0;
     return NULL;
   }

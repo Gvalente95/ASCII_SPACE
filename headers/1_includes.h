@@ -2,6 +2,7 @@
 #define INCLUDES_H
 
 #include <SDL.h>
+#include <SDL_ttf.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -16,9 +17,9 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "ascii.h"
-#include "define.h"
-#include "dialog.h"
-#include "proto.h"
+#include "2_proto.h"
+#include "3_define.h"
+#include "4_globals.h"
+#include "5_ascii.h"
 
 #endif

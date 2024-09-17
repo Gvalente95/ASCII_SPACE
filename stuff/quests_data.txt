@@ -1,0 +1,49 @@
+Stellar Salvage
+A cargo GLB_ship has crash-landed, and its valuable parts are scattered across the asteroid belt. Retrieve the GLB_ship's core.
+lvl_req 2 rar 1(UNCMN) q_type 0(FETCH)
+req_am 1 currency_reward 300 item_reward_amount 2 xp_reward 150
+
+Nebula's Edge
+Investigate the mysterious disappearances near the Nebula's Edge and report back.
+lvl_req 5 rar 2(RARE) q_type 1(INVESTIGATION)
+req_am 1 currency_reward 500 item_reward_amount 1 xp_reward 250
+
+Plasma Core Run
+Deliver the unstable plasma core to the space station before it explodes!
+lvl_req 4 rar 3(EPIC) q_type 2(DELIVERY)
+req_am 1 currency_reward 600 item_reward_amount 1 xp_reward 300
+
+Alien Infestation
+Eliminate the alien creatures that have taken over the mining station.
+lvl_req 8 rar 3(ARTIF) q_type 3(EXTERMINATION)
+req_am 10 currency_reward 1000 item_reward_amount 3 xp_reward 500
+
+Cosmic Courier
+Deliver a highly classified data chip to a remote outpost without getting intercepted by pirates.
+lvl_req 3 rar 0(CMN) q_type 2(DELIVERY)
+req_am 1 currency_reward 400 item_reward_amount 1 xp_reward 180
+
+Lost in Space
+Find the missing scientist who was last seen entering the Wormhole Research Facility.
+lvl_req 6 rar 2(RARE) q_type 1(INVESTIGATION)
+req_am 1 currency_reward 700 item_reward_amount 2 xp_reward 320
+
+Meteor Harvest
+Collect rare minerals from the passing meteor shower before they burn up in the atmosphere.
+lvl_req 5 rar 1(UNCMN) q_type 0(FETCH)
+req_am 5 currency_reward 500 item_reward_amount 2 xp_reward 250
+
+Rogue AI Shutdown
+A rogue AI is controlling an abandoned Spaceship. Enter the GLB_ship and shut it down.
+lvl_req 7 rar 3(ARTIF) q_type 3(EXTERMINATION)
+req_am 1 currency_reward 1200 item_reward_amount 3 xp_reward 600
+
+Crystal Clarity
+Retrieve the rare Quantum Crystal from the depths of the Cosmic Caverns for a wealthy collector.
+lvl_req 9 rar 4(MYSTIC) q_type 0(FETCH)
+req_am 1 currency_reward 1500 item_reward_amount 1 xp_reward 700
+
+Galactic Diplomacy
+Broker a peace agreement between the warring factions on the distant planet Veridion.
+lvl_req 10 rar 4(MYSTIC) q_type 4(NEGOTIATION)
+req_am 1 currency_reward 2000 item_reward_amount 2 xp_reward 1000
